@@ -15,7 +15,7 @@ class Settings:
     balanced_model: str = "gpt-5.6-terra"
     economy_model: str = "gpt-5.6-luna"
     chat_history_messages: int = 10
-    response_max_output_tokens: int = 1_200
+    response_max_output_tokens: int = 1200
     openai_timeout_seconds: float = 60.0
     keyword_min_matches: int = 2
     keyword_min_margin: int = 1
