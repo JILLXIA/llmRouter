@@ -133,15 +133,10 @@ class LLMRouter:
             return candidate, "keyword"
 
         try:
-            result = self._intent_model.invoke(
+            result: IntentResult = self._intent_model.invoke(
                 [SystemMessage(content=INTENT_PROMPT), HumanMessage(content=query)]
             )
-            parsed = (
-                result
-                if isinstance(result, IntentResult)
-                else IntentResult.model_validate(result)
-            )
-            return parsed.intent, "llm"
+            return result.intent, "llm"
         except Exception as error:
             logger.warning(
                 "intent_classification_failed error_type=%s", type(error).__name__
