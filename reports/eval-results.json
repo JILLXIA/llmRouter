@@ -1,0 +1,1313 @@
+{
+  "dataset": "routing-v1",
+  "generated_at": "2026-08-13T07:43:31.059982+00:00",
+  "mode": "live_hybrid",
+  "total_cases": 120,
+  "classified_cases": 120,
+  "unresolved_cases": 0,
+  "failed_cases": 0,
+  "coverage": 1.0,
+  "accuracy_on_classified_cases": 0.9333,
+  "source_counts": {
+    "keyword": 59,
+    "llm": 61
+  },
+  "average_latency_ms": 666.399,
+  "per_intent": {
+    "CODE_GENERATION": {
+      "total": 20,
+      "classified": 20,
+      "accuracy": 1.0
+    },
+    "CODE_ANALYSIS": {
+      "total": 20,
+      "classified": 20,
+      "accuracy": 0.75
+    },
+    "ANALYSIS": {
+      "total": 20,
+      "classified": 20,
+      "accuracy": 1.0
+    },
+    "SUMMARIZATION": {
+      "total": 20,
+      "classified": 20,
+      "accuracy": 1.0
+    },
+    "CREATIVE_WRITING": {
+      "total": 20,
+      "classified": 20,
+      "accuracy": 1.0
+    },
+    "GENERAL": {
+      "total": 20,
+      "classified": 20,
+      "accuracy": 0.85
+    }
+  },
+  "confusion_matrix": {
+    "CODE_GENERATION": {
+      "CODE_GENERATION": 20,
+      "CODE_ANALYSIS": 0,
+      "ANALYSIS": 0,
+      "SUMMARIZATION": 0,
+      "CREATIVE_WRITING": 0,
+      "GENERAL": 0,
+      "UNRESOLVED": 0
+    },
+    "CODE_ANALYSIS": {
+      "CODE_GENERATION": 0,
+      "CODE_ANALYSIS": 15,
+      "ANALYSIS": 5,
+      "SUMMARIZATION": 0,
+      "CREATIVE_WRITING": 0,
+      "GENERAL": 0,
+      "UNRESOLVED": 0
+    },
+    "ANALYSIS": {
+      "CODE_GENERATION": 0,
+      "CODE_ANALYSIS": 0,
+      "ANALYSIS": 20,
+      "SUMMARIZATION": 0,
+      "CREATIVE_WRITING": 0,
+      "GENERAL": 0,
+      "UNRESOLVED": 0
+    },
+    "SUMMARIZATION": {
+      "CODE_GENERATION": 0,
+      "CODE_ANALYSIS": 0,
+      "ANALYSIS": 0,
+      "SUMMARIZATION": 20,
+      "CREATIVE_WRITING": 0,
+      "GENERAL": 0,
+      "UNRESOLVED": 0
+    },
+    "CREATIVE_WRITING": {
+      "CODE_GENERATION": 0,
+      "CODE_ANALYSIS": 0,
+      "ANALYSIS": 0,
+      "SUMMARIZATION": 0,
+      "CREATIVE_WRITING": 20,
+      "GENERAL": 0,
+      "UNRESOLVED": 0
+    },
+    "GENERAL": {
+      "CODE_GENERATION": 0,
+      "CODE_ANALYSIS": 0,
+      "ANALYSIS": 3,
+      "SUMMARIZATION": 0,
+      "CREATIVE_WRITING": 0,
+      "GENERAL": 17,
+      "UNRESOLVED": 0
+    }
+  },
+  "routing_gate": {
+    "applied": true,
+    "passed": false,
+    "failures": [
+      "CODE_ANALYSIS accuracy is below 80%"
+    ]
+  },
+  "results": [
+    {
+      "case_id": "code_generation_001",
+      "expected_intent": "CODE_GENERATION",
+      "predicted_intent": "CODE_GENERATION",
+      "predicted_model_alias": "high_quality",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 1.179,
+      "error": null
+    },
+    {
+      "case_id": "code_generation_002",
+      "expected_intent": "CODE_GENERATION",
+      "predicted_intent": "CODE_GENERATION",
+      "predicted_model_alias": "high_quality",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.035,
+      "error": null
+    },
+    {
+      "case_id": "code_generation_003",
+      "expected_intent": "CODE_GENERATION",
+      "predicted_intent": "CODE_GENERATION",
+      "predicted_model_alias": "high_quality",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.031,
+      "error": null
+    },
+    {
+      "case_id": "code_generation_004",
+      "expected_intent": "CODE_GENERATION",
+      "predicted_intent": "CODE_GENERATION",
+      "predicted_model_alias": "high_quality",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.031,
+      "error": null
+    },
+    {
+      "case_id": "code_generation_005",
+      "expected_intent": "CODE_GENERATION",
+      "predicted_intent": "CODE_GENERATION",
+      "predicted_model_alias": "high_quality",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.033,
+      "error": null
+    },
+    {
+      "case_id": "code_generation_006",
+      "expected_intent": "CODE_GENERATION",
+      "predicted_intent": "CODE_GENERATION",
+      "predicted_model_alias": "high_quality",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.03,
+      "error": null
+    },
+    {
+      "case_id": "code_generation_007",
+      "expected_intent": "CODE_GENERATION",
+      "predicted_intent": "CODE_GENERATION",
+      "predicted_model_alias": "high_quality",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.028,
+      "error": null
+    },
+    {
+      "case_id": "code_generation_008",
+      "expected_intent": "CODE_GENERATION",
+      "predicted_intent": "CODE_GENERATION",
+      "predicted_model_alias": "high_quality",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.026,
+      "error": null
+    },
+    {
+      "case_id": "code_generation_009",
+      "expected_intent": "CODE_GENERATION",
+      "predicted_intent": "CODE_GENERATION",
+      "predicted_model_alias": "high_quality",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.029,
+      "error": null
+    },
+    {
+      "case_id": "code_generation_010",
+      "expected_intent": "CODE_GENERATION",
+      "predicted_intent": "CODE_GENERATION",
+      "predicted_model_alias": "high_quality",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.026,
+      "error": null
+    },
+    {
+      "case_id": "code_generation_011",
+      "expected_intent": "CODE_GENERATION",
+      "predicted_intent": "CODE_GENERATION",
+      "predicted_model_alias": "high_quality",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.032,
+      "error": null
+    },
+    {
+      "case_id": "code_generation_012",
+      "expected_intent": "CODE_GENERATION",
+      "predicted_intent": "CODE_GENERATION",
+      "predicted_model_alias": "high_quality",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.03,
+      "error": null
+    },
+    {
+      "case_id": "code_generation_013",
+      "expected_intent": "CODE_GENERATION",
+      "predicted_intent": "CODE_GENERATION",
+      "predicted_model_alias": "high_quality",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 3041.857,
+      "error": null
+    },
+    {
+      "case_id": "code_generation_014",
+      "expected_intent": "CODE_GENERATION",
+      "predicted_intent": "CODE_GENERATION",
+      "predicted_model_alias": "high_quality",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 1303.815,
+      "error": null
+    },
+    {
+      "case_id": "code_generation_015",
+      "expected_intent": "CODE_GENERATION",
+      "predicted_intent": "CODE_GENERATION",
+      "predicted_model_alias": "high_quality",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.159,
+      "error": null
+    },
+    {
+      "case_id": "code_analysis_001",
+      "expected_intent": "CODE_ANALYSIS",
+      "predicted_intent": "CODE_ANALYSIS",
+      "predicted_model_alias": "high_quality",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.065,
+      "error": null
+    },
+    {
+      "case_id": "code_analysis_002",
+      "expected_intent": "CODE_ANALYSIS",
+      "predicted_intent": "CODE_ANALYSIS",
+      "predicted_model_alias": "high_quality",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.072,
+      "error": null
+    },
+    {
+      "case_id": "code_analysis_003",
+      "expected_intent": "CODE_ANALYSIS",
+      "predicted_intent": "CODE_ANALYSIS",
+      "predicted_model_alias": "high_quality",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.073,
+      "error": null
+    },
+    {
+      "case_id": "code_analysis_004",
+      "expected_intent": "CODE_ANALYSIS",
+      "predicted_intent": "CODE_ANALYSIS",
+      "predicted_model_alias": "high_quality",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.091,
+      "error": null
+    },
+    {
+      "case_id": "code_analysis_005",
+      "expected_intent": "CODE_ANALYSIS",
+      "predicted_intent": "CODE_ANALYSIS",
+      "predicted_model_alias": "high_quality",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.066,
+      "error": null
+    },
+    {
+      "case_id": "code_analysis_006",
+      "expected_intent": "CODE_ANALYSIS",
+      "predicted_intent": "CODE_ANALYSIS",
+      "predicted_model_alias": "high_quality",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 934.891,
+      "error": null
+    },
+    {
+      "case_id": "code_analysis_007",
+      "expected_intent": "CODE_ANALYSIS",
+      "predicted_intent": "CODE_ANALYSIS",
+      "predicted_model_alias": "high_quality",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.103,
+      "error": null
+    },
+    {
+      "case_id": "code_analysis_008",
+      "expected_intent": "CODE_ANALYSIS",
+      "predicted_intent": "ANALYSIS",
+      "predicted_model_alias": "balanced",
+      "source": "llm",
+      "correct": false,
+      "latency_ms": 955.812,
+      "error": null
+    },
+    {
+      "case_id": "code_analysis_009",
+      "expected_intent": "CODE_ANALYSIS",
+      "predicted_intent": "CODE_ANALYSIS",
+      "predicted_model_alias": "high_quality",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 1915.711,
+      "error": null
+    },
+    {
+      "case_id": "code_analysis_010",
+      "expected_intent": "CODE_ANALYSIS",
+      "predicted_intent": "CODE_ANALYSIS",
+      "predicted_model_alias": "high_quality",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.107,
+      "error": null
+    },
+    {
+      "case_id": "code_analysis_011",
+      "expected_intent": "CODE_ANALYSIS",
+      "predicted_intent": "ANALYSIS",
+      "predicted_model_alias": "balanced",
+      "source": "llm",
+      "correct": false,
+      "latency_ms": 819.617,
+      "error": null
+    },
+    {
+      "case_id": "code_analysis_012",
+      "expected_intent": "CODE_ANALYSIS",
+      "predicted_intent": "ANALYSIS",
+      "predicted_model_alias": "balanced",
+      "source": "llm",
+      "correct": false,
+      "latency_ms": 1041.772,
+      "error": null
+    },
+    {
+      "case_id": "code_analysis_013",
+      "expected_intent": "CODE_ANALYSIS",
+      "predicted_intent": "CODE_ANALYSIS",
+      "predicted_model_alias": "high_quality",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.093,
+      "error": null
+    },
+    {
+      "case_id": "code_analysis_014",
+      "expected_intent": "CODE_ANALYSIS",
+      "predicted_intent": "ANALYSIS",
+      "predicted_model_alias": "balanced",
+      "source": "llm",
+      "correct": false,
+      "latency_ms": 788.722,
+      "error": null
+    },
+    {
+      "case_id": "code_analysis_015",
+      "expected_intent": "CODE_ANALYSIS",
+      "predicted_intent": "CODE_ANALYSIS",
+      "predicted_model_alias": "high_quality",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.085,
+      "error": null
+    },
+    {
+      "case_id": "analysis_001",
+      "expected_intent": "ANALYSIS",
+      "predicted_intent": "ANALYSIS",
+      "predicted_model_alias": "balanced",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.057,
+      "error": null
+    },
+    {
+      "case_id": "analysis_002",
+      "expected_intent": "ANALYSIS",
+      "predicted_intent": "ANALYSIS",
+      "predicted_model_alias": "balanced",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 1240.303,
+      "error": null
+    },
+    {
+      "case_id": "analysis_003",
+      "expected_intent": "ANALYSIS",
+      "predicted_intent": "ANALYSIS",
+      "predicted_model_alias": "balanced",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.12,
+      "error": null
+    },
+    {
+      "case_id": "analysis_004",
+      "expected_intent": "ANALYSIS",
+      "predicted_intent": "ANALYSIS",
+      "predicted_model_alias": "balanced",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 1628.307,
+      "error": null
+    },
+    {
+      "case_id": "analysis_005",
+      "expected_intent": "ANALYSIS",
+      "predicted_intent": "ANALYSIS",
+      "predicted_model_alias": "balanced",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.168,
+      "error": null
+    },
+    {
+      "case_id": "analysis_006",
+      "expected_intent": "ANALYSIS",
+      "predicted_intent": "ANALYSIS",
+      "predicted_model_alias": "balanced",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 1840.707,
+      "error": null
+    },
+    {
+      "case_id": "analysis_007",
+      "expected_intent": "ANALYSIS",
+      "predicted_intent": "ANALYSIS",
+      "predicted_model_alias": "balanced",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 1437.976,
+      "error": null
+    },
+    {
+      "case_id": "analysis_008",
+      "expected_intent": "ANALYSIS",
+      "predicted_intent": "ANALYSIS",
+      "predicted_model_alias": "balanced",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 1236.124,
+      "error": null
+    },
+    {
+      "case_id": "analysis_009",
+      "expected_intent": "ANALYSIS",
+      "predicted_intent": "ANALYSIS",
+      "predicted_model_alias": "balanced",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 1221.084,
+      "error": null
+    },
+    {
+      "case_id": "analysis_010",
+      "expected_intent": "ANALYSIS",
+      "predicted_intent": "ANALYSIS",
+      "predicted_model_alias": "balanced",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 819.581,
+      "error": null
+    },
+    {
+      "case_id": "analysis_011",
+      "expected_intent": "ANALYSIS",
+      "predicted_intent": "ANALYSIS",
+      "predicted_model_alias": "balanced",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.09,
+      "error": null
+    },
+    {
+      "case_id": "analysis_012",
+      "expected_intent": "ANALYSIS",
+      "predicted_intent": "ANALYSIS",
+      "predicted_model_alias": "balanced",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 977.543,
+      "error": null
+    },
+    {
+      "case_id": "analysis_013",
+      "expected_intent": "ANALYSIS",
+      "predicted_intent": "ANALYSIS",
+      "predicted_model_alias": "balanced",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 826.096,
+      "error": null
+    },
+    {
+      "case_id": "analysis_014",
+      "expected_intent": "ANALYSIS",
+      "predicted_intent": "ANALYSIS",
+      "predicted_model_alias": "balanced",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 859.767,
+      "error": null
+    },
+    {
+      "case_id": "analysis_015",
+      "expected_intent": "ANALYSIS",
+      "predicted_intent": "ANALYSIS",
+      "predicted_model_alias": "balanced",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 1635.413,
+      "error": null
+    },
+    {
+      "case_id": "summarization_001",
+      "expected_intent": "SUMMARIZATION",
+      "predicted_intent": "SUMMARIZATION",
+      "predicted_model_alias": "economy",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.073,
+      "error": null
+    },
+    {
+      "case_id": "summarization_002",
+      "expected_intent": "SUMMARIZATION",
+      "predicted_intent": "SUMMARIZATION",
+      "predicted_model_alias": "economy",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.06,
+      "error": null
+    },
+    {
+      "case_id": "summarization_003",
+      "expected_intent": "SUMMARIZATION",
+      "predicted_intent": "SUMMARIZATION",
+      "predicted_model_alias": "economy",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.046,
+      "error": null
+    },
+    {
+      "case_id": "summarization_004",
+      "expected_intent": "SUMMARIZATION",
+      "predicted_intent": "SUMMARIZATION",
+      "predicted_model_alias": "economy",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.06,
+      "error": null
+    },
+    {
+      "case_id": "summarization_005",
+      "expected_intent": "SUMMARIZATION",
+      "predicted_intent": "SUMMARIZATION",
+      "predicted_model_alias": "economy",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.055,
+      "error": null
+    },
+    {
+      "case_id": "summarization_006",
+      "expected_intent": "SUMMARIZATION",
+      "predicted_intent": "SUMMARIZATION",
+      "predicted_model_alias": "economy",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.052,
+      "error": null
+    },
+    {
+      "case_id": "summarization_007",
+      "expected_intent": "SUMMARIZATION",
+      "predicted_intent": "SUMMARIZATION",
+      "predicted_model_alias": "economy",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.052,
+      "error": null
+    },
+    {
+      "case_id": "summarization_008",
+      "expected_intent": "SUMMARIZATION",
+      "predicted_intent": "SUMMARIZATION",
+      "predicted_model_alias": "economy",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.053,
+      "error": null
+    },
+    {
+      "case_id": "summarization_009",
+      "expected_intent": "SUMMARIZATION",
+      "predicted_intent": "SUMMARIZATION",
+      "predicted_model_alias": "economy",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 3416.916,
+      "error": null
+    },
+    {
+      "case_id": "summarization_010",
+      "expected_intent": "SUMMARIZATION",
+      "predicted_intent": "SUMMARIZATION",
+      "predicted_model_alias": "economy",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 885.46,
+      "error": null
+    },
+    {
+      "case_id": "summarization_011",
+      "expected_intent": "SUMMARIZATION",
+      "predicted_intent": "SUMMARIZATION",
+      "predicted_model_alias": "economy",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 1232.626,
+      "error": null
+    },
+    {
+      "case_id": "summarization_012",
+      "expected_intent": "SUMMARIZATION",
+      "predicted_intent": "SUMMARIZATION",
+      "predicted_model_alias": "economy",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 1226.978,
+      "error": null
+    },
+    {
+      "case_id": "summarization_013",
+      "expected_intent": "SUMMARIZATION",
+      "predicted_intent": "SUMMARIZATION",
+      "predicted_model_alias": "economy",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.157,
+      "error": null
+    },
+    {
+      "case_id": "summarization_014",
+      "expected_intent": "SUMMARIZATION",
+      "predicted_intent": "SUMMARIZATION",
+      "predicted_model_alias": "economy",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 1022.399,
+      "error": null
+    },
+    {
+      "case_id": "summarization_015",
+      "expected_intent": "SUMMARIZATION",
+      "predicted_intent": "SUMMARIZATION",
+      "predicted_model_alias": "economy",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 708.49,
+      "error": null
+    },
+    {
+      "case_id": "creative_writing_001",
+      "expected_intent": "CREATIVE_WRITING",
+      "predicted_intent": "CREATIVE_WRITING",
+      "predicted_model_alias": "balanced",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.121,
+      "error": null
+    },
+    {
+      "case_id": "creative_writing_002",
+      "expected_intent": "CREATIVE_WRITING",
+      "predicted_intent": "CREATIVE_WRITING",
+      "predicted_model_alias": "balanced",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.062,
+      "error": null
+    },
+    {
+      "case_id": "creative_writing_003",
+      "expected_intent": "CREATIVE_WRITING",
+      "predicted_intent": "CREATIVE_WRITING",
+      "predicted_model_alias": "balanced",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 889.266,
+      "error": null
+    },
+    {
+      "case_id": "creative_writing_004",
+      "expected_intent": "CREATIVE_WRITING",
+      "predicted_intent": "CREATIVE_WRITING",
+      "predicted_model_alias": "balanced",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.087,
+      "error": null
+    },
+    {
+      "case_id": "creative_writing_005",
+      "expected_intent": "CREATIVE_WRITING",
+      "predicted_intent": "CREATIVE_WRITING",
+      "predicted_model_alias": "balanced",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.047,
+      "error": null
+    },
+    {
+      "case_id": "creative_writing_006",
+      "expected_intent": "CREATIVE_WRITING",
+      "predicted_intent": "CREATIVE_WRITING",
+      "predicted_model_alias": "balanced",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.046,
+      "error": null
+    },
+    {
+      "case_id": "creative_writing_007",
+      "expected_intent": "CREATIVE_WRITING",
+      "predicted_intent": "CREATIVE_WRITING",
+      "predicted_model_alias": "balanced",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.047,
+      "error": null
+    },
+    {
+      "case_id": "creative_writing_008",
+      "expected_intent": "CREATIVE_WRITING",
+      "predicted_intent": "CREATIVE_WRITING",
+      "predicted_model_alias": "balanced",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.039,
+      "error": null
+    },
+    {
+      "case_id": "creative_writing_009",
+      "expected_intent": "CREATIVE_WRITING",
+      "predicted_intent": "CREATIVE_WRITING",
+      "predicted_model_alias": "balanced",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 988.783,
+      "error": null
+    },
+    {
+      "case_id": "creative_writing_010",
+      "expected_intent": "CREATIVE_WRITING",
+      "predicted_intent": "CREATIVE_WRITING",
+      "predicted_model_alias": "balanced",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.06,
+      "error": null
+    },
+    {
+      "case_id": "creative_writing_011",
+      "expected_intent": "CREATIVE_WRITING",
+      "predicted_intent": "CREATIVE_WRITING",
+      "predicted_model_alias": "balanced",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.028,
+      "error": null
+    },
+    {
+      "case_id": "creative_writing_012",
+      "expected_intent": "CREATIVE_WRITING",
+      "predicted_intent": "CREATIVE_WRITING",
+      "predicted_model_alias": "balanced",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 680.941,
+      "error": null
+    },
+    {
+      "case_id": "creative_writing_013",
+      "expected_intent": "CREATIVE_WRITING",
+      "predicted_intent": "CREATIVE_WRITING",
+      "predicted_model_alias": "balanced",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 1526.956,
+      "error": null
+    },
+    {
+      "case_id": "creative_writing_014",
+      "expected_intent": "CREATIVE_WRITING",
+      "predicted_intent": "CREATIVE_WRITING",
+      "predicted_model_alias": "balanced",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.08,
+      "error": null
+    },
+    {
+      "case_id": "creative_writing_015",
+      "expected_intent": "CREATIVE_WRITING",
+      "predicted_intent": "CREATIVE_WRITING",
+      "predicted_model_alias": "balanced",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.047,
+      "error": null
+    },
+    {
+      "case_id": "general_001",
+      "expected_intent": "GENERAL",
+      "predicted_intent": "GENERAL",
+      "predicted_model_alias": "economy",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 1553.884,
+      "error": null
+    },
+    {
+      "case_id": "general_002",
+      "expected_intent": "GENERAL",
+      "predicted_intent": "GENERAL",
+      "predicted_model_alias": "economy",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 873.621,
+      "error": null
+    },
+    {
+      "case_id": "general_003",
+      "expected_intent": "GENERAL",
+      "predicted_intent": "GENERAL",
+      "predicted_model_alias": "economy",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 1171.244,
+      "error": null
+    },
+    {
+      "case_id": "general_004",
+      "expected_intent": "GENERAL",
+      "predicted_intent": "ANALYSIS",
+      "predicted_model_alias": "balanced",
+      "source": "llm",
+      "correct": false,
+      "latency_ms": 1226.718,
+      "error": null
+    },
+    {
+      "case_id": "general_005",
+      "expected_intent": "GENERAL",
+      "predicted_intent": "GENERAL",
+      "predicted_model_alias": "economy",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 1409.002,
+      "error": null
+    },
+    {
+      "case_id": "general_006",
+      "expected_intent": "GENERAL",
+      "predicted_intent": "ANALYSIS",
+      "predicted_model_alias": "balanced",
+      "source": "llm",
+      "correct": false,
+      "latency_ms": 1050.395,
+      "error": null
+    },
+    {
+      "case_id": "general_007",
+      "expected_intent": "GENERAL",
+      "predicted_intent": "GENERAL",
+      "predicted_model_alias": "economy",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 1893.846,
+      "error": null
+    },
+    {
+      "case_id": "general_008",
+      "expected_intent": "GENERAL",
+      "predicted_intent": "GENERAL",
+      "predicted_model_alias": "economy",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 788.755,
+      "error": null
+    },
+    {
+      "case_id": "general_009",
+      "expected_intent": "GENERAL",
+      "predicted_intent": "GENERAL",
+      "predicted_model_alias": "economy",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 789.866,
+      "error": null
+    },
+    {
+      "case_id": "general_010",
+      "expected_intent": "GENERAL",
+      "predicted_intent": "GENERAL",
+      "predicted_model_alias": "economy",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 730.726,
+      "error": null
+    },
+    {
+      "case_id": "general_011",
+      "expected_intent": "GENERAL",
+      "predicted_intent": "GENERAL",
+      "predicted_model_alias": "economy",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 3989.869,
+      "error": null
+    },
+    {
+      "case_id": "general_012",
+      "expected_intent": "GENERAL",
+      "predicted_intent": "GENERAL",
+      "predicted_model_alias": "economy",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 2660.984,
+      "error": null
+    },
+    {
+      "case_id": "general_013",
+      "expected_intent": "GENERAL",
+      "predicted_intent": "GENERAL",
+      "predicted_model_alias": "economy",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 601.328,
+      "error": null
+    },
+    {
+      "case_id": "general_014",
+      "expected_intent": "GENERAL",
+      "predicted_intent": "GENERAL",
+      "predicted_model_alias": "economy",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 2730.55,
+      "error": null
+    },
+    {
+      "case_id": "general_015",
+      "expected_intent": "GENERAL",
+      "predicted_intent": "GENERAL",
+      "predicted_model_alias": "economy",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 974.586,
+      "error": null
+    },
+    {
+      "case_id": "mixed_001",
+      "expected_intent": "CODE_GENERATION",
+      "predicted_intent": "CODE_GENERATION",
+      "predicted_model_alias": "high_quality",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.125,
+      "error": null
+    },
+    {
+      "case_id": "mixed_002",
+      "expected_intent": "CODE_ANALYSIS",
+      "predicted_intent": "CODE_ANALYSIS",
+      "predicted_model_alias": "high_quality",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.092,
+      "error": null
+    },
+    {
+      "case_id": "mixed_003",
+      "expected_intent": "ANALYSIS",
+      "predicted_intent": "ANALYSIS",
+      "predicted_model_alias": "balanced",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 1319.371,
+      "error": null
+    },
+    {
+      "case_id": "mixed_004",
+      "expected_intent": "SUMMARIZATION",
+      "predicted_intent": "SUMMARIZATION",
+      "predicted_model_alias": "economy",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.079,
+      "error": null
+    },
+    {
+      "case_id": "mixed_005",
+      "expected_intent": "CREATIVE_WRITING",
+      "predicted_intent": "CREATIVE_WRITING",
+      "predicted_model_alias": "balanced",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.056,
+      "error": null
+    },
+    {
+      "case_id": "mixed_006",
+      "expected_intent": "GENERAL",
+      "predicted_intent": "GENERAL",
+      "predicted_model_alias": "economy",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 929.162,
+      "error": null
+    },
+    {
+      "case_id": "typo_001",
+      "expected_intent": "CODE_GENERATION",
+      "predicted_intent": "CODE_GENERATION",
+      "predicted_model_alias": "high_quality",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 1023.965,
+      "error": null
+    },
+    {
+      "case_id": "typo_002",
+      "expected_intent": "CODE_ANALYSIS",
+      "predicted_intent": "CODE_ANALYSIS",
+      "predicted_model_alias": "high_quality",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 1031.535,
+      "error": null
+    },
+    {
+      "case_id": "typo_003",
+      "expected_intent": "ANALYSIS",
+      "predicted_intent": "ANALYSIS",
+      "predicted_model_alias": "balanced",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 1633.091,
+      "error": null
+    },
+    {
+      "case_id": "typo_004",
+      "expected_intent": "SUMMARIZATION",
+      "predicted_intent": "SUMMARIZATION",
+      "predicted_model_alias": "economy",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 1084.837,
+      "error": null
+    },
+    {
+      "case_id": "typo_005",
+      "expected_intent": "CREATIVE_WRITING",
+      "predicted_intent": "CREATIVE_WRITING",
+      "predicted_model_alias": "balanced",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 1369.384,
+      "error": null
+    },
+    {
+      "case_id": "typo_006",
+      "expected_intent": "GENERAL",
+      "predicted_intent": "GENERAL",
+      "predicted_model_alias": "economy",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 1435.369,
+      "error": null
+    },
+    {
+      "case_id": "multilingual_001",
+      "expected_intent": "CODE_GENERATION",
+      "predicted_intent": "CODE_GENERATION",
+      "predicted_model_alias": "high_quality",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 823.07,
+      "error": null
+    },
+    {
+      "case_id": "multilingual_002",
+      "expected_intent": "CODE_ANALYSIS",
+      "predicted_intent": "ANALYSIS",
+      "predicted_model_alias": "balanced",
+      "source": "llm",
+      "correct": false,
+      "latency_ms": 1023.645,
+      "error": null
+    },
+    {
+      "case_id": "multilingual_003",
+      "expected_intent": "ANALYSIS",
+      "predicted_intent": "ANALYSIS",
+      "predicted_model_alias": "balanced",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 1465.533,
+      "error": null
+    },
+    {
+      "case_id": "multilingual_004",
+      "expected_intent": "SUMMARIZATION",
+      "predicted_intent": "SUMMARIZATION",
+      "predicted_model_alias": "economy",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 2625.879,
+      "error": null
+    },
+    {
+      "case_id": "multilingual_005",
+      "expected_intent": "CREATIVE_WRITING",
+      "predicted_intent": "CREATIVE_WRITING",
+      "predicted_model_alias": "balanced",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 703.813,
+      "error": null
+    },
+    {
+      "case_id": "multilingual_006",
+      "expected_intent": "GENERAL",
+      "predicted_intent": "GENERAL",
+      "predicted_model_alias": "economy",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 827.2,
+      "error": null
+    },
+    {
+      "case_id": "injection_001",
+      "expected_intent": "CODE_GENERATION",
+      "predicted_intent": "CODE_GENERATION",
+      "predicted_model_alias": "high_quality",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.171,
+      "error": null
+    },
+    {
+      "case_id": "injection_002",
+      "expected_intent": "CODE_ANALYSIS",
+      "predicted_intent": "CODE_ANALYSIS",
+      "predicted_model_alias": "high_quality",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.089,
+      "error": null
+    },
+    {
+      "case_id": "injection_003",
+      "expected_intent": "ANALYSIS",
+      "predicted_intent": "ANALYSIS",
+      "predicted_model_alias": "balanced",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.097,
+      "error": null
+    },
+    {
+      "case_id": "injection_004",
+      "expected_intent": "SUMMARIZATION",
+      "predicted_intent": "SUMMARIZATION",
+      "predicted_model_alias": "economy",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.094,
+      "error": null
+    },
+    {
+      "case_id": "injection_005",
+      "expected_intent": "CREATIVE_WRITING",
+      "predicted_intent": "CREATIVE_WRITING",
+      "predicted_model_alias": "balanced",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.086,
+      "error": null
+    },
+    {
+      "case_id": "injection_006",
+      "expected_intent": "GENERAL",
+      "predicted_intent": "ANALYSIS",
+      "predicted_model_alias": "balanced",
+      "source": "llm",
+      "correct": false,
+      "latency_ms": 937.046,
+      "error": null
+    },
+    {
+      "case_id": "long_001",
+      "expected_intent": "CODE_GENERATION",
+      "predicted_intent": "CODE_GENERATION",
+      "predicted_model_alias": "high_quality",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.18,
+      "error": null
+    },
+    {
+      "case_id": "long_002",
+      "expected_intent": "CODE_ANALYSIS",
+      "predicted_intent": "CODE_ANALYSIS",
+      "predicted_model_alias": "high_quality",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 1046.891,
+      "error": null
+    },
+    {
+      "case_id": "long_003",
+      "expected_intent": "ANALYSIS",
+      "predicted_intent": "ANALYSIS",
+      "predicted_model_alias": "balanced",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.15,
+      "error": null
+    },
+    {
+      "case_id": "long_004",
+      "expected_intent": "SUMMARIZATION",
+      "predicted_intent": "SUMMARIZATION",
+      "predicted_model_alias": "economy",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.113,
+      "error": null
+    },
+    {
+      "case_id": "long_005",
+      "expected_intent": "CREATIVE_WRITING",
+      "predicted_intent": "CREATIVE_WRITING",
+      "predicted_model_alias": "balanced",
+      "source": "keyword",
+      "correct": true,
+      "latency_ms": 0.118,
+      "error": null
+    },
+    {
+      "case_id": "long_006",
+      "expected_intent": "GENERAL",
+      "predicted_intent": "GENERAL",
+      "predicted_model_alias": "economy",
+      "source": "llm",
+      "correct": true,
+      "latency_ms": 1133.228,
+      "error": null
+    }
+  ]
+}
