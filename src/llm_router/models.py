@@ -33,12 +33,18 @@ class ChatResult:
     classifier_source: Literal["keyword", "llm", "fallback"]
     model: str
     latency_ms: float
+    input_tokens: int = 0
+    output_tokens: int = 0
+    total_tokens: int = 0
 
-    def routing_metadata(self) -> dict[str, str]:
-        """Return the small routing object stored in Streamlit session state."""
+    def routing_metadata(self) -> dict[str, str | int]:
+        """Return routing and usage data stored in Streamlit session state."""
 
         return {
             "intent": self.intent.value,
             "classifier_source": self.classifier_source,
             "model": self.model,
+            "input_tokens": self.input_tokens,
+            "output_tokens": self.output_tokens,
+            "total_tokens": self.total_tokens,
         }

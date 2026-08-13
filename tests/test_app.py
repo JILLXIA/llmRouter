@@ -55,6 +55,7 @@ def test_mocked_chat_submission(monkeypatch: pytest.MonkeyPatch) -> None:
     assert any(item.value == "Mock implementation" for item in app.markdown)
     assert "Intent: CODE_GENERATION" in app.caption[0].value
     assert "Model: test-code-model" in app.caption[0].value
+    assert "Tokens: 0 in + 0 out = 0 total" in app.caption[0].value
 
 
 def test_clear_chat(monkeypatch: pytest.MonkeyPatch) -> None:

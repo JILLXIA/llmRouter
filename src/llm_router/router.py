@@ -179,15 +179,30 @@ class LLMRouter:
                 "The model request could not be completed. Please try again."
             ) from error
 
+        usage = response.usage_metadata or {}
+        input_tokens = int(usage.get("input_tokens", 0))
+        output_tokens = int(usage.get("output_tokens", 0))
+        total_tokens = int(usage.get("total_tokens", input_tokens + output_tokens))
         latency_ms = (perf_counter() - started) * 1_000
         logger.info(
-            "chat_completed intent=%s source=%s model=%s latency_ms=%.2f",
+            "chat_completed intent=%s source=%s model=%s "
+            "total_tokens=%d latency_ms=%.2f",
             intent.value,
             source,
             model_name,
+            total_tokens,
             latency_ms,
         )
-        return ChatResult(answer, intent, source, model_name, latency_ms)
+        return ChatResult(
+            response=answer,
+            intent=intent,
+            classifier_source=source,
+            model=model_name,
+            latency_ms=latency_ms,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            total_tokens=total_tokens,
+        )
 
     def _chat_messages(
         self,

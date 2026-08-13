@@ -104,7 +104,7 @@ When the user submits non-empty text:
 For demonstration and debugging, show a small caption below each assistant response:
 
 ```text
-Intent: CODE_GENERATION · Classified by: keyword · Model: gpt-5.6-sol
+Intent: CODE_GENERATION · Classified by: keyword · Model: gpt-5.6-sol · Tokens: 120 in + 40 out = 160 total
 ```
 
 This can be hidden later, but it is useful for proving that routing actually happened.
@@ -278,8 +278,25 @@ The MVP must:
 - cache each initialized response model by model ID rather than rebuilding it for every message;
 - read `OPENAI_API_KEY` from the existing local `.env`;
 - return plain assistant text;
-- record selected intent, classifier source, response model, and latency in memory/logs;
+- record selected intent, classifier source, response model, latency, and response-model token usage in memory/logs;
 - handle empty output and API errors gracefully.
+
+`ChatResult` stores the selected response-model usage reported by LangChain's `AIMessage.usage_metadata`:
+
+```python
+ChatResult(
+    response="...",
+    intent=Intent.CODE_GENERATION,
+    classifier_source="keyword",
+    model="gpt-5.6-sol",
+    latency_ms=850.0,
+    input_tokens=120,
+    output_tokens=40,
+    total_tokens=160,
+)
+```
+
+These counts cover the response-model call. They intentionally exclude the optional lightweight intent-model call in this P0.
 
 ## 10. Chat-session state
 
@@ -298,6 +315,9 @@ st.session_state.messages = [
             "intent": "CODE_GENERATION",
             "classifier_source": "keyword",
             "model": "gpt-5.6-sol",
+            "input_tokens": 120,
+            "output_tokens": 40,
+            "total_tokens": 160,
         },
     },
 ]
@@ -435,6 +455,7 @@ The MVP is ready when all scenarios pass:
 10. Clearing chat removes session messages.
 11. The API key is absent from source, UI, errors, and logs.
 12. `streamlit run app.py` starts the application from documented setup instructions.
+13. Successful responses expose input, output, and total response-model tokens.
 
 ## 16. Explicitly deferred
 
@@ -469,8 +490,8 @@ These can be introduced after the vertical slice is reviewed and working.
 
 ## 18. Definition of done
 
-- All 12 acceptance scenarios pass.
-- All intent/router/service unit tests pass without network access.
+- All 13 acceptance scenarios pass.
+- All intent/router unit tests pass without network access.
 - One manually approved real OpenAI smoke test succeeds for each configured response-model alias.
 - The app can be started with `streamlit run app.py`.
 - Model IDs are configurable.

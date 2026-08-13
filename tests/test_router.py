@@ -26,7 +26,14 @@ class StubRunnable:
 class StubModel:
     def __init__(self, name: str) -> None:
         self.name = name
-        self.response = AIMessage(content="A useful answer")
+        self.response = AIMessage(
+            content="A useful answer",
+            usage_metadata={
+                "input_tokens": 21,
+                "output_tokens": 9,
+                "total_tokens": 30,
+            },
+        )
         self.error: Exception | None = None
         self.calls: list[list[object]] = []
         self.structured = StubRunnable()
@@ -147,6 +154,10 @@ def test_chat_selects_model_and_builds_langchain_messages() -> None:
     assert result.intent == Intent.CODE_GENERATION
     assert result.classifier_source == "keyword"
     assert result.model == "quality-model"
+    assert result.input_tokens == 21
+    assert result.output_tokens == 9
+    assert result.total_tokens == 30
+    assert result.routing_metadata()["total_tokens"] == 30
 
     sent = factory.models[1].calls[0]
     assert isinstance(sent[0], SystemMessage)
@@ -219,3 +230,17 @@ def test_empty_model_response_is_rejected() -> None:
 
     with pytest.raises(RouterError, match="could not be completed"):
         router.chat("Build a Python class", [])
+
+
+def test_missing_usage_metadata_defaults_to_zero() -> None:
+    router, factory = make_router()
+    router.chat("Implement a Python function", [])
+    factory.models[1].response = AIMessage(content="Answer without usage")
+
+    result = router.chat("Build a Python class", [])
+
+    assert (
+        result.input_tokens,
+        result.output_tokens,
+        result.total_tokens,
+    ) == (0, 0, 0)

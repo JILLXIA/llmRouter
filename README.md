@@ -8,7 +8,7 @@ This repository implements the P0 vertical slice of `Slack.AI LLM Router Platfor
 2. Ambiguous or unmatched messages use `gpt-5.4-nano` for typed intent classification.
 3. The router selects a configured OpenAI response model.
 4. The selected model receives up to the last 10 chat messages through the Responses API.
-5. Streamlit displays the answer, inferred intent, classifier source, and selected model.
+5. Streamlit displays the answer, routing decision, and response-model token usage.
 
 The default routing table is:
 
@@ -45,7 +45,7 @@ python -m pytest
 python -m pytest --cov=llm_router --cov=app --cov-report=term-missing
 ```
 
-The automated suite injects fake LangChain models and does not consume API credits. The simplified implementation passes 26 tests with 97% branch coverage. A real-model smoke test requires a valid `OPENAI_API_KEY` and access to the configured model IDs.
+The automated suite injects fake LangChain models and does not consume API credits. The simplified implementation passes 27 tests with 97% branch coverage. A real-model smoke test requires a valid `OPENAI_API_KEY` and access to the configured model IDs.
 
 ## Project structure
 

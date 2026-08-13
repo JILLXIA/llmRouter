@@ -20,11 +20,14 @@ def get_router() -> LLMRouter:
     return LLMRouter(load_settings())
 
 
-def routing_caption(routing: dict[str, str]) -> str:
+def routing_caption(routing: dict[str, str | int]) -> str:
     return (
         f"Intent: {routing['intent']} · "
         f"Classified by: {routing['classifier_source']} · "
-        f"Model: {routing['model']}"
+        f"Model: {routing['model']} · "
+        f"Tokens: {routing.get('input_tokens', 0)} in + "
+        f"{routing.get('output_tokens', 0)} out = "
+        f"{routing.get('total_tokens', 0)} total"
     )
 
 
