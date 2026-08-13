@@ -14,6 +14,7 @@ Build a small working LLM router that demonstrates the central idea of the proje
 4. The selected model generates the assistant response.
 5. The response appears in the Streamlit conversation.
 6. An anonymous URL session restores its conversation from local SQLite storage.
+7. A repeatable evaluation suite measures routing decisions.
 
 This MVP should be easy to understand, run locally, test, and demonstrate. It intentionally excludes the larger requirements in the other planning documents until this vertical slice works.
 
@@ -32,7 +33,7 @@ The following defaults were approved for implementation:
 | Hybrid classification | Use keyword rules first; call the lightweight LLM only when keyword evidence is missing or ambiguous |
 | Intent model | `gpt-5.4-nano` with Structured Outputs |
 | Response model routing | `gpt-5.6-sol`, `gpt-5.6-terra`, and `gpt-5.6-luna` by intent |
-| Response display | Non-streaming for the first MVP |
+| Response display | Stream text chunks in Streamlit; return a final `ChatResult` after completion |
 | Session identity | UUID v4 in the Streamlit URL query parameter `session_id` |
 | Persistence | Local SQLite database at configurable `DATABASE_PATH` |
 | Clear behavior | Delete the current session's messages but retain its session ID |
@@ -99,8 +100,9 @@ When the user submits non-empty text:
 4. Classify the current user message.
 5. Select the response model.
 6. Call OpenAI with recent chat history.
-7. Display the assistant response with `st.chat_message("assistant")`.
-8. Save the response and routing metadata to the same SQLite session.
+7. Display non-empty assistant text chunks immediately with a trailing `▌` cursor.
+8. Replace the placeholder with the clean final response after the stream completes.
+9. Save the response and routing metadata to the same SQLite session only after successful completion.
 
 ### 5.3 Routing information
 
@@ -281,8 +283,20 @@ The MVP must:
 - cache each initialized response model by model ID rather than rebuilding it for every message;
 - read `OPENAI_API_KEY` from the existing local `.env`;
 - return plain assistant text;
+- use LangChain's response-model `stream()` iterator and expose text deltas through an optional `on_chunk` callback;
+- reconstruct one final `ChatResult` from the accumulated chunks;
 - record selected intent, classifier source, response model, latency, and response-model token usage in memory/logs;
-- handle empty output and API errors gracefully.
+- recover usage metadata from the accumulated stream;
+- handle empty streams and API errors gracefully;
+- discard partial assistant output on stream failure while preserving the stored user message.
+
+Public method:
+
+```python
+router.chat(query, history, on_chunk=render_text_delta) -> ChatResult
+```
+
+The callback is optional so non-UI callers can wait for the final result without handling deltas. Intent classification remains non-streaming because it returns one small structured object.
 
 `ChatResult` stores the selected response-model usage reported by LangChain's `AIMessage.usage_metadata`:
 
@@ -445,11 +459,13 @@ Inject a fake LangChain model factory in automated tests; do not spend API credi
 
 ### Chat service
 
-- User message produces one response call.
+- User message produces one streamed response call.
 - Response call uses the selected model.
 - Recent history is included and capped.
 - Routing metadata is not sent as conversation text.
-- Empty response and OpenAI error become friendly application errors.
+- Chunks are emitted in order and the final result reconstructs their text and usage.
+- Empty stream and OpenAI error become friendly application errors.
+- A failure after partial output stores no assistant message.
 
 ### Streamlit smoke test
 
@@ -489,26 +505,45 @@ The MVP is ready when all scenarios pass:
 15. The API key is absent from source, UI, errors, and logs.
 16. `streamlit run app.py` starts the application from documented setup instructions.
 17. Successful responses expose input, output, and total response-model tokens.
+18. Assistant text is visible incrementally before the final result completes.
+19. Token usage from the final stream metadata is preserved in `ChatResult` and SQLite.
+20. A failed partial stream removes partial UI text and stores no assistant response.
 
-## 16. Explicitly deferred
+## 16. Routing evaluation requirements
+
+The portfolio evaluation milestone adds measurement without changing runtime routing:
+
+- a versioned 120-case JSONL dataset with 20 cases per intent;
+- a deliberately small three-field case format: ID, query, and expected intent;
+- Pydantic validation and duplicate-ID rejection;
+- offline evaluation of keyword precision and coverage without API calls;
+- opt-in `--live` evaluation of the complete keyword-plus-LLM classifier;
+- overall/per-intent accuracy, coverage, confusion matrix, source counts, and latency;
+- JSON and Markdown reports that exclude API keys, conversations, and model responses;
+- continued evaluation after individual case failures;
+- live-only target thresholds of 90% overall accuracy and 80% for every intent.
+
+Live results may be used as portfolio evidence only after the dataset labels are reviewed.
+
+## 17. Explicitly deferred
 
 Do not build these in the MVP:
 
 - FastAPI or public REST endpoints.
 - Anthropic or local/vLLM providers.
-- Public response streaming.
+- FastAPI/SSE response streaming; Streamlit streaming is implemented.
 - Docker, Kubernetes, Kafka, ClickHouse, Redis, PostgreSQL, or managed databases.
 - User login, session ownership, API-key management, tenants, quotas, or budgets.
 - Response caching or context compression.
 - Prometheus, dashboards, alerts, or a statistics API.
 - Cross-device user accounts, session lists, retention jobs, or multi-instance storage.
 - File, image, audio, or tool input.
-- Learned routing, feedback loops, or model-quality evaluation.
+- Learned routing or feedback loops beyond the implemented evaluation suite.
 - Automatic response-model retry/fallback.
 
 These can be introduced after the vertical slice is reviewed and working.
 
-## 17. Implementation order
+## 18. Implementation order
 
 1. Define `Intent`, `IntentResult`, and application settings.
 2. Implement and unit-test keyword classification.
@@ -519,12 +554,14 @@ These can be introduced after the vertical slice is reviewed and working.
 7. Implement the SQLite schema and storage helpers.
 8. Build the Streamlit chat UI with UUID URL sessions and database-backed history.
 9. Add error handling, clear-chat behavior, and routing caption.
-10. Run mocked tests, then perform a small real-API smoke test.
-11. Document setup, session security, and demo commands.
+10. Add callback-based response streaming and partial-failure cleanup.
+11. Add the versioned dataset, simple offline/live routing evaluator, and reports.
+12. Run mocked tests, then perform manually approved live smoke/evaluation calls.
+13. Document setup, session security, streaming, and evaluation commands.
 
-## 18. Definition of done
+## 19. Definition of done
 
-- All 17 acceptance scenarios pass.
+- All 20 acceptance scenarios pass.
 - All intent/router unit tests pass without network access.
 - One manually approved real OpenAI smoke test succeeds for each configured response-model alias.
 - The app can be started with `streamlit run app.py`.
@@ -532,21 +569,25 @@ These can be introduced after the vertical slice is reviewed and working.
 - `OPENAI_API_KEY` is not committed or exposed.
 - README documents environment setup and usage.
 - Anonymous session history is persisted and isolated in local SQLite.
+- Offline evaluation validates all 120 cases without network access.
+- Live evaluation remains opt-in and clearly separated from simulation.
 - No other deferred feature has been added to the MVP implementation.
 
-## 19. Resolved implementation decisions
+## 20. Resolved implementation decisions
 
 1. One Streamlit process calls the internal router and storage modules; there is no FastAPI backend in P0.
 2. The lightweight intent model runs only for ambiguous or unmatched keyword results.
 3. Sol handles code, Terra handles analysis/creative writing, and Luna handles summarization/general by default.
 4. The response model receives at most the latest 10 messages.
-5. Responses are non-streaming in P0.
+5. Response generation streams through an optional callback and still returns one final `ChatResult`.
 6. LangChain `init_chat_model` is used directly inside the single `LLMRouter` backend class.
 7. UUID v4 session IDs live in the URL and SQLite is the sole conversation source of truth.
 8. Clear chat keeps the session row/UUID and deletes only that session's messages.
 9. This P0 has no authentication; the session URL must be treated as private.
+10. Partial streamed assistant output is discarded on failure; the user prompt remains stored.
+11. Offline evaluation measures only the keyword stage; only reviewed live results measure the full hybrid router.
 
-## 20. Implementation verification
+## 21. Implementation verification
 
 Completed locally on 2026-08-12:
 
@@ -555,8 +596,10 @@ Completed locally on 2026-08-12:
 - history limiting and removal of internal routing metadata are tested;
 - the consolidated router tests cover keyword/LLM/fallback classification, all model routes, LangChain message conversion, model configuration, structured output, history limits, errors, and per-model caching;
 - friendly empty-output and provider-error behavior is tested;
+- response chunk ordering, usage reconstruction, empty chunks, empty streams, and partial-stream failure are tested;
 - Streamlit controls, UUID URL creation/validation, persisted-session restore, missing-key behavior, mocked chat submission, routing caption, failure persistence, and clear-chat behavior are smoke tested;
 - SQLite schema initialization, ordered metadata round trips, session isolation, clear semantics, and input validation are unit tested;
+- the 120-case dataset shape, validation, keyword/live evaluation flow, thresholds, errors, and report output are tested;
 - the installed LangChain OpenAI integration accepts the configured Responses API, reasoning, timeout, token-limit, and structured-output options;
 - automated tests pass without network calls or API credits;
 - measured branch coverage is recorded in the README after each validation run.

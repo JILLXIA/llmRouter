@@ -57,6 +57,7 @@ KEYWORD_PATTERNS: dict[Intent, tuple[str, ...]] = {
 
 ClassifierSource = Literal["keyword", "llm", "fallback"]
 ModelFactory = Callable[..., Any]
+StreamCallback = Callable[[str], None]
 
 
 class RouterError(Exception):
@@ -154,6 +155,7 @@ class LLMRouter:
         self,
         user_message: str,
         history: Sequence[Mapping[str, Any]],
+        on_chunk: StreamCallback | None = None,
     ) -> ChatResult:
         query = user_message.strip()
         if not query:
@@ -164,9 +166,20 @@ class LLMRouter:
         model_name = self.model_for(intent)
         messages = self._chat_messages(history, query)
 
+        combined_response: Any | None = None
+        emit = on_chunk or (lambda _: None)
         try:
-            response = self._response_model(model_name).invoke(messages)
-            answer = response.text.strip()
+            for chunk in self._response_model(model_name).stream(
+                messages,
+                stream_usage=True,
+            ):
+                combined_response = (
+                    chunk if combined_response is None else combined_response + chunk
+                )
+                if text := chunk.text:
+                    emit(text)
+
+            answer = combined_response.text.strip() if combined_response else ""
             if not answer:
                 raise ValueError("empty model response")
         except Exception as error:
@@ -179,7 +192,7 @@ class LLMRouter:
                 "The model request could not be completed. Please try again."
             ) from error
 
-        usage = response.usage_metadata or {}
+        usage = combined_response.usage_metadata or {}
         input_tokens = int(usage.get("input_tokens", 0))
         output_tokens = int(usage.get("output_tokens", 0))
         total_tokens = int(usage.get("total_tokens", input_tokens + output_tokens))

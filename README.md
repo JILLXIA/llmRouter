@@ -9,7 +9,7 @@ This repository implements the P0 vertical slice of `Slack.AI LLM Router Platfor
 3. The router selects a configured OpenAI response model.
 4. Each anonymous conversation gets a UUID v4 in the page URL and is stored in SQLite.
 5. The selected model receives up to the last 10 chat messages through the Responses API.
-6. Streamlit displays the answer, routing decision, and response-model token usage.
+6. Streamlit displays the answer as it streams, followed by the routing decision and response-model token usage.
 
 The default routing table is:
 
@@ -48,7 +48,23 @@ python -m pytest
 python -m pytest --cov=llm_router --cov=app --cov-report=term-missing
 ```
 
-The automated suite injects fake LangChain models and does not consume API credits. The current implementation passes 36 tests with 98% branch coverage. A real-model smoke test requires a valid `OPENAI_API_KEY` and access to the configured model IDs.
+The automated suite injects fake LangChain models and does not consume API credits. The current implementation passes 45 tests with 92% branch coverage. A real-model smoke test requires a valid `OPENAI_API_KEY` and access to the configured model IDs.
+
+## Run evaluations
+
+The repository includes a curated 120-case routing dataset with 20 prompts for each supported intent. The evaluation is intentionally small: it loads the cases, calls a classifier, compares predicted and expected intents, and writes two reports.
+
+```bash
+python -m llm_router.evals
+```
+
+The default command makes no API calls. It measures only the deterministic keyword stage and reports both precision and coverage. Add `--live` to evaluate the complete keyword-plus-LLM classifier; this can make paid OpenAI calls:
+
+```bash
+python -m llm_router.evals --live
+```
+
+Reports are written to `reports/eval-results.json` and `reports/eval-summary.md`. Review every expected label before quoting a live result on a resume. See the [evaluation guide](docs/06-evaluation-guide.md) for details.
 
 ## Project structure
 
@@ -56,21 +72,25 @@ The automated suite injects fake LangChain models and does not consume API credi
 app.py                         Streamlit UI and anonymous-session flow
 src/llm_router/config.py       Environment-backed settings
 src/llm_router/models.py       Intent schema and chat result
-src/llm_router/router.py       Classification, routing, and LangChain calls
+src/llm_router/router.py       Classification, routing, and streamed LangChain calls
 src/llm_router/storage.py      SQLite sessions and message persistence
+src/llm_router/evals.py        Simple keyword/live routing evaluation
+evals/routing-v1.jsonl         Versioned 120-case routing dataset
 tests/test_router.py           Complete routing-flow tests
 tests/test_app.py              Streamlit session-flow smoke tests
 tests/test_config.py           Settings tests
 tests/test_storage.py          SQLite persistence and isolation tests
+tests/test_evals.py            Dataset, metric, error, and CLI tests
 ```
 
-The P0 deliberately has one main backend class: `LLMRouter`. Its `chat()` method classifies the prompt, looks up the configured model, converts recent history to LangChain messages, invokes the model, and returns the answer with routing metadata. Small helper methods keep those steps readable without introducing a layer for each one.
+The P0 deliberately has one main backend class: `LLMRouter`. Its `chat()` method classifies the prompt, looks up the configured model, converts recent history to LangChain messages, streams model text through an optional callback, and returns the completed answer with routing metadata. Small helper methods keep those steps readable without introducing a layer for each one.
 
 LangChain's `init_chat_model` enables the OpenAI Responses API and provider-native JSON Schema output for intent classification. Routed response models are cached by model ID.
 
 ## Scope and documentation
 
-- `MVP P0 — implemented`: Streamlit chat, hybrid intent classification, OpenAI model routing, anonymous SQLite session history, friendly errors, and automated tests.
+- `MVP P0 — implemented`: streamed Streamlit chat, hybrid intent classification, OpenAI model routing, anonymous SQLite session history, friendly errors, and automated tests.
+- `Portfolio P1 — implemented`: curated routing dataset, offline keyword evaluation, opt-in live hybrid evaluation, and reproducible JSON/Markdown reports.
 - `Validation pending`: manually approved live OpenAI smoke calls; no API key is stored in this repository.
 - `Deferred`: FastAPI endpoints and the larger platform requirements in documents 00–04.
 

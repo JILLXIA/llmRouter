@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from pathlib import Path
 from uuid import UUID
 
@@ -94,9 +95,17 @@ def test_mocked_chat_submission_is_persisted(
         def __init__(self, settings: object) -> None:
             pass
 
-        def chat(self, prompt: str, history: list[object]) -> ChatResult:
+        def chat(
+            self,
+            prompt: str,
+            history: list[object],
+            on_chunk: Callable[[str], None] | None = None,
+        ) -> ChatResult:
             assert prompt == "Implement a Python endpoint"
             assert history == []
+            assert on_chunk is not None
+            on_chunk("Mock ")
+            on_chunk("implementation")
             return ChatResult(
                 response="Mock implementation",
                 intent=Intent.CODE_GENERATION,
@@ -150,7 +159,14 @@ def test_failed_model_call_keeps_user_message(
         def __init__(self, settings: object) -> None:
             pass
 
-        def chat(self, prompt: str, history: list[object]) -> ChatResult:
+        def chat(
+            self,
+            prompt: str,
+            history: list[object],
+            on_chunk: Callable[[str], None] | None = None,
+        ) -> ChatResult:
+            assert on_chunk is not None
+            on_chunk("Partial answer")
             raise RouterError(
                 "The model request could not be completed. Please try again."
             )
@@ -165,6 +181,7 @@ def test_failed_model_call_keeps_user_message(
     assert app.error[0].value == (
         "The model request could not be completed. Please try again."
     )
+    assert not any(item.value == "Partial answer" for item in app.markdown)
     assert load_messages(database, session_id) == [
         {"role": "user", "content": "Please answer this"}
     ]

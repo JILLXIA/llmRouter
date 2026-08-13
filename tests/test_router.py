@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, AIMessageChunk, HumanMessage, SystemMessage
 
 from llm_router.config import Settings
 from llm_router.models import Intent, IntentResult
@@ -26,16 +26,21 @@ class StubRunnable:
 class StubModel:
     def __init__(self, name: str) -> None:
         self.name = name
-        self.response = AIMessage(
-            content="A useful answer",
-            usage_metadata={
-                "input_tokens": 21,
-                "output_tokens": 9,
-                "total_tokens": 30,
-            },
-        )
+        self.chunks = [
+            AIMessageChunk(content="A useful "),
+            AIMessageChunk(
+                content="answer",
+                usage_metadata={
+                    "input_tokens": 21,
+                    "output_tokens": 9,
+                    "total_tokens": 30,
+                },
+            ),
+        ]
         self.error: Exception | None = None
         self.calls: list[list[object]] = []
+        self.stream_kwargs: list[dict[str, object]] = []
+        self.error_after_chunks: int | None = None
         self.structured = StubRunnable()
         self.structured_schema: object | None = None
         self.structured_method: str | None = None
@@ -46,10 +51,23 @@ class StubModel:
         return self.structured
 
     def invoke(self, messages: list[object]) -> AIMessage:
+        raise AssertionError("response generation must use stream(), not invoke()")
+
+    def stream(
+        self,
+        messages: list[object],
+        **kwargs: object,
+    ) -> object:
         self.calls.append(messages)
-        if self.error:
+        self.stream_kwargs.append(kwargs)
+        if self.error and self.error_after_chunks is None:
             raise self.error
-        return self.response
+        for index, chunk in enumerate(self.chunks):
+            if self.error and self.error_after_chunks == index:
+                raise self.error
+            yield chunk
+        if self.error and self.error_after_chunks == len(self.chunks):
+            raise self.error
 
 
 class StubModelFactory:
@@ -148,7 +166,8 @@ def test_chat_selects_model_and_builds_langchain_messages() -> None:
         {"role": "user", "content": "Recent question"},
     ]
 
-    result = router.chat("Implement a Python endpoint", history)
+    emitted: list[str] = []
+    result = router.chat("Implement a Python endpoint", history, on_chunk=emitted.append)
 
     assert result.response == "A useful answer"
     assert result.intent == Intent.CODE_GENERATION
@@ -158,6 +177,8 @@ def test_chat_selects_model_and_builds_langchain_messages() -> None:
     assert result.output_tokens == 9
     assert result.total_tokens == 30
     assert result.routing_metadata()["total_tokens"] == 30
+    assert emitted == ["A useful ", "answer"]
+    assert factory.models[1].stream_kwargs == [{"stream_usage": True}]
 
     sent = factory.models[1].calls[0]
     assert isinstance(sent[0], SystemMessage)
@@ -226,7 +247,7 @@ def test_empty_input_and_model_failures_have_safe_errors() -> None:
 def test_empty_model_response_is_rejected() -> None:
     router, factory = make_router()
     router.chat("Implement a Python function", [])
-    factory.models[1].response = AIMessage(content="   ")
+    factory.models[1].chunks = [AIMessageChunk(content="   ")]
 
     with pytest.raises(RouterError, match="could not be completed"):
         router.chat("Build a Python class", [])
@@ -235,7 +256,7 @@ def test_empty_model_response_is_rejected() -> None:
 def test_missing_usage_metadata_defaults_to_zero() -> None:
     router, factory = make_router()
     router.chat("Implement a Python function", [])
-    factory.models[1].response = AIMessage(content="Answer without usage")
+    factory.models[1].chunks = [AIMessageChunk(content="Answer without usage")]
 
     result = router.chat("Build a Python class", [])
 
@@ -244,3 +265,42 @@ def test_missing_usage_metadata_defaults_to_zero() -> None:
         result.output_tokens,
         result.total_tokens,
     ) == (0, 0, 0)
+
+
+def test_stream_ignores_empty_chunks_and_reports_partial_failure() -> None:
+    router, factory = make_router()
+    router.chat("Implement a Python function", [])
+    factory.models[1].chunks = [
+        AIMessageChunk(content="Partial"),
+        AIMessageChunk(content=" answer"),
+    ]
+    factory.models[1].error = RuntimeError("private stream failure")
+    factory.models[1].error_after_chunks = 1
+    emitted: list[str] = []
+
+    with pytest.raises(RouterError, match="could not be completed"):
+        router.chat("Build a Python class", [], on_chunk=emitted.append)
+
+    assert emitted == ["Partial"]
+
+
+def test_empty_metadata_chunk_is_not_emitted() -> None:
+    router, factory = make_router()
+    router.chat("Implement a Python function", [])
+    factory.models[1].chunks = [
+        AIMessageChunk(content=""),
+        AIMessageChunk(
+            content="Done",
+            usage_metadata={
+                "input_tokens": 3,
+                "output_tokens": 1,
+                "total_tokens": 4,
+            },
+        ),
+    ]
+    emitted: list[str] = []
+
+    result = router.chat("Build a Python class", [], on_chunk=emitted.append)
+
+    assert emitted == ["Done"]
+    assert result.total_tokens == 4

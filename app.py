@@ -90,14 +90,27 @@ def main() -> None:
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    try:
-        with st.spinner("Choosing the best model..."):
-            result = get_router().chat(prompt, messages)
-    except RouterError as error:
-        st.error(str(error))
-        return
+    with st.chat_message("assistant"):
+        placeholder = st.empty()
+        streamed_text = ""
 
-    routing = result.routing_metadata()
+        def render_chunk(chunk: str) -> None:
+            nonlocal streamed_text
+            streamed_text += chunk
+            placeholder.markdown(f"{streamed_text}▌")
+
+        try:
+            with st.spinner("Choosing the best model..."):
+                result = get_router().chat(prompt, messages, on_chunk=render_chunk)
+        except RouterError as error:
+            placeholder.empty()
+            st.error(str(error))
+            return
+
+        placeholder.markdown(result.response)
+        routing = result.routing_metadata()
+        st.caption(routing_caption(routing))
+
     save_message(
         settings.database_path,
         session_id,
@@ -105,9 +118,6 @@ def main() -> None:
         result.response,
         routing,
     )
-    with st.chat_message("assistant"):
-        st.markdown(result.response)
-        st.caption(routing_caption(routing))
 
 
 if __name__ == "__main__":
