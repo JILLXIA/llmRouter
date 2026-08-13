@@ -1,5 +1,3 @@
-"""Environment settings for the Streamlit MVP."""
-
 from __future__ import annotations
 
 import os
@@ -11,6 +9,7 @@ from dotenv import load_dotenv
 @dataclass(frozen=True)
 class Settings:
     openai_api_key: str = field(repr=False)
+    database_path: str = "data/llm_router.db"
     intent_model: str = "gpt-5.4-nano"
     high_quality_model: str = "gpt-5.6-sol"
     balanced_model: str = "gpt-5.6-terra"
@@ -32,6 +31,7 @@ def load_settings() -> Settings:
 
     return Settings(
         openai_api_key=api_key,
+        database_path=os.getenv("DATABASE_PATH", "data/llm_router.db"),
         intent_model=os.getenv("INTENT_MODEL", "gpt-5.4-nano"),
         high_quality_model=os.getenv("HIGH_QUALITY_MODEL", "gpt-5.6-sol"),
         balanced_model=os.getenv("BALANCED_MODEL", "gpt-5.6-terra"),

@@ -13,6 +13,7 @@ Build a small working LLM router that demonstrates the central idea of the proje
 3. The router selects an OpenAI model appropriate for that intent.
 4. The selected model generates the assistant response.
 5. The response appears in the Streamlit conversation.
+6. An anonymous URL session restores its conversation from local SQLite storage.
 
 This MVP should be easy to understand, run locally, test, and demonstrate. It intentionally excludes the larger requirements in the other planning documents until this vertical slice works.
 
@@ -22,18 +23,20 @@ The following defaults were approved for implementation:
 
 | Decision | Proposed MVP default |
 |---|---|
-| Deployment shape | One Streamlit process with separate Python service modules; no FastAPI service yet |
+| Deployment shape | One Streamlit process with a router module and a SQLite storage module; no FastAPI service yet |
 | Provider | OpenAI only |
 | OpenAI API | Responses API through LangChain's OpenAI integration |
 | Chat input | Text only |
-| Chat history | Store in `st.session_state`; send the most recent 10 messages to the response model |
+| Chat history | Store in SQLite; load the full conversation for display and send the most recent 10 messages to the response model |
 | Intent classes | Keep the original six: code generation, code analysis, analysis, summarization, creative writing, general |
 | Hybrid classification | Use keyword rules first; call the lightweight LLM only when keyword evidence is missing or ambiguous |
 | Intent model | `gpt-5.4-nano` with Structured Outputs |
 | Response model routing | `gpt-5.6-sol`, `gpt-5.6-terra`, and `gpt-5.6-luna` by intent |
 | Response display | Non-streaming for the first MVP |
-| Persistence | None; browser refresh starts a new conversation |
-| Authentication | None; local demonstration only |
+| Session identity | UUID v4 in the Streamlit URL query parameter `session_id` |
+| Persistence | Local SQLite database at configurable `DATABASE_PATH` |
+| Clear behavior | Delete the current session's messages but retain its session ID |
+| Authentication | None; possession of the session URL grants access for this local demonstration |
 
 The model IDs must remain configurable because account access and available model IDs can vary.
 
@@ -62,17 +65,16 @@ models:
 ```mermaid
 flowchart LR
     User[User] --> UI[Streamlit Chat UI]
-    UI --> Service[Chat Service]
-    Service --> Router[Intent Router]
+    UI <--> SQLite[(SQLite sessions and messages)]
+    UI --> Router[LLM Router]
     Router --> Keywords[Keyword Classifier]
     Router -->|ambiguous only| IntentLLM[Lightweight OpenAI Intent Model]
     Router --> Selector[Model Mapping]
     Selector --> OpenAI[Selected OpenAI Response Model]
-    OpenAI --> Service
-    Service --> UI
+    OpenAI --> UI
 ```
 
-“Backend” in this proposal means the Python service layer called by Streamlit in the same process. Keeping UI, routing, and OpenAI code in separate modules makes a future FastAPI extraction straightforward without adding a second service now.
+“Backend” in this proposal means the `LLMRouter` and SQLite helpers called by Streamlit in the same process. Keeping UI, routing, OpenAI, and storage concerns in small modules makes a future FastAPI extraction straightforward without adding a second service now.
 
 ## 5. Required user experience
 
@@ -84,6 +86,7 @@ The page shows:
 - One-sentence description.
 - Chat history area.
 - Streamlit chat input with placeholder: `Ask me anything...`.
+- Anonymous session UUID in the sidebar and `session_id` in the page URL.
 - Optional sidebar showing the configured intent and response model aliases.
 
 ### 5.2 Submit a message
@@ -91,13 +94,13 @@ The page shows:
 When the user submits non-empty text:
 
 1. Display the user message immediately with `st.chat_message("user")`.
-2. Add it to `st.session_state.messages`.
+2. Save it to the current SQLite session before calling the model.
 3. Show a spinner such as `Choosing the best model...`.
 4. Classify the current user message.
 5. Select the response model.
 6. Call OpenAI with recent chat history.
 7. Display the assistant response with `st.chat_message("assistant")`.
-8. Add the response and routing metadata to session state.
+8. Save the response and routing metadata to the same SQLite session.
 
 ### 5.3 Routing information
 
@@ -298,38 +301,48 @@ ChatResult(
 
 These counts cover the response-model call. They intentionally exclude the optional lightweight intent-model call in this P0.
 
-## 10. Chat-session state
+## 10. Anonymous chat sessions and storage
 
-Use `st.session_state`:
+SQLite is the sole source of truth for conversation history. The application must not maintain a second authoritative copy in `st.session_state`.
+
+On each page load:
+
+1. Read `session_id` from `st.query_params`.
+2. Reuse it only when it is a valid UUID v4; otherwise create a new UUID v4.
+3. Insert the session row if it does not exist.
+4. Write the canonical ID back to `?session_id=<uuid>`.
+5. Load that session's messages from SQLite in insertion order.
+
+Use two small tables:
+
+- `sessions`: session UUID plus creation and last-update timestamps;
+- `messages`: session foreign key, role, content, routing fields, latency, token usage, and creation timestamp.
+
+Storage requirements:
+
+- initialize the schema automatically and idempotently;
+- default to `data/llm_router.db` and create its parent directory;
+- use parameterized SQL, foreign keys, WAL mode, and a busy timeout;
+- save the user message before the response-model call, so a failed call does not lose the prompt;
+- save the assistant message only after a successful response;
+- isolate reads, writes, and clears by session ID;
+- render the full stored conversation after each Streamlit rerun;
+- do not send the internal `routing` object as chat content;
+- cap model context to the most recent 10 messages initially;
+- make `Clear chat` delete only the current session's messages and keep its UUID;
+- retain sessions and messages until cleared or the database is manually removed.
+
+Keep the persistence API small:
 
 ```python
-st.session_state.messages = [
-    {
-        "role": "user",
-        "content": "Write a Python Fibonacci function.",
-    },
-    {
-        "role": "assistant",
-        "content": "Here is an iterative implementation...",
-        "routing": {
-            "intent": "CODE_GENERATION",
-            "classifier_source": "keyword",
-            "model": "gpt-5.6-sol",
-            "input_tokens": 120,
-            "output_tokens": 40,
-            "total_tokens": 160,
-        },
-    },
-]
+initialize_database(database_path)
+get_or_create_session(database_path, requested_id=None) -> str
+load_messages(database_path, session_id) -> list[dict]
+save_message(database_path, session_id, role, content, routing=None)
+clear_messages(database_path, session_id)
 ```
 
-Requirements:
-
-- render saved messages after each Streamlit rerun;
-- do not send the internal `routing` object as chat content;
-- cap context to the most recent 10 messages initially;
-- provide a `Clear chat` button;
-- do not persist messages to a file or database.
+This is anonymous resume functionality, not authentication. A session URL is bearer-like: anyone who has it can open that conversation. Login, ownership checks, expiry, encryption policy, and multi-user authorization remain deferred.
 
 ## 11. Configuration and secrets
 
@@ -337,6 +350,7 @@ Required entries in the existing local `.env`:
 
 ```text
 OPENAI_API_KEY=
+DATABASE_PATH=data/llm_router.db
 INTENT_MODEL=gpt-5.4-nano
 HIGH_QUALITY_MODEL=gpt-5.6-sol
 BALANCED_MODEL=gpt-5.6-terra
@@ -347,6 +361,7 @@ CHAT_HISTORY_MESSAGES=10
 Rules:
 
 - `.env` is ignored by Git.
+- SQLite database files and their WAL/SHM sidecars are ignored by Git.
 - The app stops with a clear setup message when `OPENAI_API_KEY` is missing.
 - Secret values never appear in the UI or logs.
 - Model IDs can be changed without editing router logic.
@@ -360,11 +375,13 @@ llmRouter/
 │   ├── __init__.py
 │   ├── config.py             # environment/model settings
 │   ├── models.py             # IntentResult and ChatResult
-│   └── router.py             # classify, select, and call models
+│   ├── router.py             # classify, select, and call models
+│   └── storage.py            # SQLite sessions and messages
 ├── tests/
 │   ├── test_app.py
 │   ├── test_router.py
-│   └── test_config.py
+│   ├── test_config.py
+│   └── test_storage.py
 ├── .gitignore
 ├── pyproject.toml
 ├── requirements.txt
@@ -390,14 +407,15 @@ pytest-cov
 ## 13. End-to-end flow
 
 ```text
-1. User enters message.
-2. Streamlit saves and displays it.
-3. Keyword classifier scores intent.
-4. If keyword result is ambiguous/no-match, gpt-5.4-nano classifies it.
-5. Router maps final intent to a configured model alias.
-6. `LLMRouter.chat()` sends recent conversation to the selected OpenAI model.
-7. Streamlit displays the answer and routing caption.
-8. Chat/session state retains the conversation until cleared/refreshed.
+1. Streamlit validates or creates the URL session and loads its SQLite messages.
+2. User enters a message.
+3. Streamlit stores and displays the user message.
+4. Keyword classifier scores intent.
+5. If keyword result is ambiguous/no-match, gpt-5.4-nano classifies it.
+6. Router maps final intent to a configured model alias.
+7. `LLMRouter.chat()` sends recent conversation to the selected OpenAI model.
+8. Streamlit stores and displays the answer plus routing caption.
+9. Refreshing or reopening the same URL restores the conversation until cleared.
 ```
 
 ## 14. Required tests
@@ -438,6 +456,17 @@ Inject a fake LangChain model factory in automated tests; do not spend API credi
 - App starts.
 - Chat input and clear button render.
 - A mocked submission displays user and assistant messages plus routing caption.
+- A missing or invalid URL session is replaced by a valid UUID v4.
+- Reopening a valid session URL restores its messages.
+- A response-model error preserves the already-saved user message.
+
+### SQLite storage
+
+- Schema initialization is idempotent.
+- Messages round-trip in order with routing, latency, and token metadata.
+- Two session IDs cannot read or clear each other's messages.
+- Clear removes messages but retains the session ID.
+- Invalid message roles and empty content are rejected.
 
 ## 15. MVP acceptance scenarios
 
@@ -451,11 +480,15 @@ The MVP is ready when all scenarios pass:
 6. “Hello, how are you?” routes to `GENERAL` and the economy model.
 7. An ambiguous message invokes the lightweight intent model and uses its valid structured result.
 8. A failed intent-model call falls back to keyword/general classification.
-9. A failed response-model call shows a friendly error and preserves chat history.
-10. Clearing chat removes session messages.
-11. The API key is absent from source, UI, errors, and logs.
-12. `streamlit run app.py` starts the application from documented setup instructions.
-13. Successful responses expose input, output, and total response-model tokens.
+9. A failed response-model call shows a friendly error.
+10. The first visit creates a UUID v4 session and places it in the URL.
+11. Reopening the same session URL restores its stored conversation.
+12. Separate session IDs have isolated histories.
+13. Clearing chat removes only the current session's messages and retains its ID.
+14. A failed response-model call preserves the submitted user message.
+15. The API key is absent from source, UI, errors, and logs.
+16. `streamlit run app.py` starts the application from documented setup instructions.
+17. Successful responses expose input, output, and total response-model tokens.
 
 ## 16. Explicitly deferred
 
@@ -464,11 +497,11 @@ Do not build these in the MVP:
 - FastAPI or public REST endpoints.
 - Anthropic or local/vLLM providers.
 - Public response streaming.
-- Docker, Kubernetes, Kafka, ClickHouse, Redis, or databases.
-- User login, API-key management, tenants, quotas, or budgets.
+- Docker, Kubernetes, Kafka, ClickHouse, Redis, PostgreSQL, or managed databases.
+- User login, session ownership, API-key management, tenants, quotas, or budgets.
 - Response caching or context compression.
 - Prometheus, dashboards, alerts, or a statistics API.
-- Persistent chat history.
+- Cross-device user accounts, session lists, retention jobs, or multi-instance storage.
 - File, image, audio, or tool input.
 - Learned routing, feedback loops, or model-quality evaluation.
 - Automatic response-model retry/fallback.
@@ -483,30 +516,35 @@ These can be introduced after the vertical slice is reviewed and working.
 4. Implement hybrid decision rule.
 5. Implement configurable intent-to-model mapping.
 6. Add response generation and orchestration to `LLMRouter` using a fake model factory first.
-7. Build Streamlit chat UI and session history.
-8. Add error handling, clear-chat behavior, and routing caption.
-9. Run mocked tests, then perform a small real-API smoke test.
-10. Document setup and demo commands.
+7. Implement the SQLite schema and storage helpers.
+8. Build the Streamlit chat UI with UUID URL sessions and database-backed history.
+9. Add error handling, clear-chat behavior, and routing caption.
+10. Run mocked tests, then perform a small real-API smoke test.
+11. Document setup, session security, and demo commands.
 
 ## 18. Definition of done
 
-- All 13 acceptance scenarios pass.
+- All 17 acceptance scenarios pass.
 - All intent/router unit tests pass without network access.
 - One manually approved real OpenAI smoke test succeeds for each configured response-model alias.
 - The app can be started with `streamlit run app.py`.
 - Model IDs are configurable.
 - `OPENAI_API_KEY` is not committed or exposed.
 - README documents environment setup and usage.
-- No deferred feature has been added to the MVP implementation.
+- Anonymous session history is persisted and isolated in local SQLite.
+- No other deferred feature has been added to the MVP implementation.
 
 ## 19. Resolved implementation decisions
 
-1. One Streamlit process calls internal Python service modules; there is no FastAPI backend in P0.
+1. One Streamlit process calls the internal router and storage modules; there is no FastAPI backend in P0.
 2. The lightweight intent model runs only for ambiguous or unmatched keyword results.
 3. Sol handles code, Terra handles analysis/creative writing, and Luna handles summarization/general by default.
 4. The response model receives at most the latest 10 messages.
 5. Responses are non-streaming in P0.
 6. LangChain `init_chat_model` is used directly inside the single `LLMRouter` backend class.
+7. UUID v4 session IDs live in the URL and SQLite is the sole conversation source of truth.
+8. Clear chat keeps the session row/UUID and deletes only that session's messages.
+9. This P0 has no authentication; the session URL must be treated as private.
 
 ## 20. Implementation verification
 
@@ -517,7 +555,8 @@ Completed locally on 2026-08-12:
 - history limiting and removal of internal routing metadata are tested;
 - the consolidated router tests cover keyword/LLM/fallback classification, all model routes, LangChain message conversion, model configuration, structured output, history limits, errors, and per-model caching;
 - friendly empty-output and provider-error behavior is tested;
-- Streamlit controls, missing-key behavior, mocked chat submission, routing caption, and clear-chat behavior are smoke tested;
+- Streamlit controls, UUID URL creation/validation, persisted-session restore, missing-key behavior, mocked chat submission, routing caption, failure persistence, and clear-chat behavior are smoke tested;
+- SQLite schema initialization, ordered metadata round trips, session isolation, clear semantics, and input validation are unit tested;
 - the installed LangChain OpenAI integration accepts the configured Responses API, reasoning, timeout, token-limit, and structured-output options;
 - automated tests pass without network calls or API credits;
 - measured branch coverage is recorded in the README after each validation run.

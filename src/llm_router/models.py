@@ -1,5 +1,3 @@
-"""The three small data types shared by the router and UI."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -37,13 +35,14 @@ class ChatResult:
     output_tokens: int = 0
     total_tokens: int = 0
 
-    def routing_metadata(self) -> dict[str, str | int]:
-        """Return routing and usage data stored in Streamlit session state."""
+    def routing_metadata(self) -> dict[str, str | int | float]:
+        """Return routing and usage data stored with the assistant message."""
 
         return {
             "intent": self.intent.value,
             "classifier_source": self.classifier_source,
             "model": self.model,
+            "latency_ms": self.latency_ms,
             "input_tokens": self.input_tokens,
             "output_tokens": self.output_tokens,
             "total_tokens": self.total_tokens,

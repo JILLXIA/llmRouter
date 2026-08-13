@@ -1,19 +1,43 @@
 from pathlib import Path
+from uuid import UUID
 
 import pytest
+import streamlit as st
 from streamlit.testing.v1 import AppTest
 
 from llm_router.models import ChatResult, Intent
+from llm_router.router import RouterError
+from llm_router.storage import get_or_create_session, load_messages, save_message
 
 APP_PATH = Path(__file__).parents[1] / "app.py"
 
 
-def test_app_renders_chat_controls(monkeypatch: pytest.MonkeyPatch) -> None:
+def configure_app(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> Path:
+    database = tmp_path / "router.db"
+    st.cache_resource.clear()
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.setenv("DATABASE_PATH", str(database))
+    return database
+
+
+def query_session_id(app: AppTest) -> str:
+    value = app.query_params["session_id"]
+    return value[-1] if isinstance(value, list) else value
+
+
+def test_app_creates_url_session_and_renders_controls(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    configure_app(monkeypatch, tmp_path)
 
     app = AppTest.from_file(str(APP_PATH)).run(timeout=10)
 
     assert not app.exception
+    assert UUID(query_session_id(app)).version == 4
     assert app.title[0].value == "LLM Router Chat"
     assert app.chat_input[0].placeholder == "Ask me anything..."
     assert app.button[0].label == "Clear chat"
@@ -29,7 +53,43 @@ def test_app_explains_missing_key(monkeypatch: pytest.MonkeyPatch) -> None:
     assert "OPENAI_API_KEY is missing" in app.error[0].value
 
 
-def test_mocked_chat_submission(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_invalid_url_session_is_replaced(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    configure_app(monkeypatch, tmp_path)
+    app = AppTest.from_file(str(APP_PATH))
+    app.query_params["session_id"] = "invalid"
+
+    app.run(timeout=10)
+
+    assert not app.exception
+    assert UUID(query_session_id(app)).version == 4
+
+
+def test_persisted_session_is_restored_from_url(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    database = configure_app(monkeypatch, tmp_path)
+    session_id = get_or_create_session(database)
+    save_message(database, session_id, "user", "Persisted question")
+
+    app = AppTest.from_file(str(APP_PATH))
+    app.query_params["session_id"] = session_id
+    app.run(timeout=10)
+
+    assert not app.exception
+    assert any(item.value == "Persisted question" for item in app.markdown)
+    assert query_session_id(app) == session_id
+
+
+def test_mocked_chat_submission_is_persisted(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    database = configure_app(monkeypatch, tmp_path)
+
     class FakeRouter:
         def __init__(self, settings: object) -> None:
             pass
@@ -45,10 +105,10 @@ def test_mocked_chat_submission(monkeypatch: pytest.MonkeyPatch) -> None:
                 latency_ms=1.5,
             )
 
-    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
     monkeypatch.setattr("llm_router.router.LLMRouter", FakeRouter)
 
     app = AppTest.from_file(str(APP_PATH)).run(timeout=10)
+    session_id = query_session_id(app)
     app.chat_input[0].set_value("Implement a Python endpoint").run(timeout=10)
 
     assert not app.exception
@@ -56,15 +116,55 @@ def test_mocked_chat_submission(monkeypatch: pytest.MonkeyPatch) -> None:
     assert "Intent: CODE_GENERATION" in app.caption[0].value
     assert "Model: test-code-model" in app.caption[0].value
     assert "Tokens: 0 in + 0 out = 0 total" in app.caption[0].value
+    assert [message["role"] for message in load_messages(database, session_id)] == [
+        "user",
+        "assistant",
+    ]
 
 
-def test_clear_chat(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+def test_clear_chat_deletes_only_current_session_messages(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    database = configure_app(monkeypatch, tmp_path)
+    session_id = get_or_create_session(database)
+    save_message(database, session_id, "user", "Hello")
+
     app = AppTest.from_file(str(APP_PATH))
-    app.session_state["messages"] = [{"role": "user", "content": "Hello"}]
-
+    app.query_params["session_id"] = session_id
     app.run(timeout=10)
     app.button[0].click().run(timeout=10)
 
     assert not app.exception
-    assert app.session_state["messages"] == []
+    assert load_messages(database, session_id) == []
+    assert query_session_id(app) == session_id
+
+
+def test_failed_model_call_keeps_user_message(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    database = configure_app(monkeypatch, tmp_path)
+
+    class FailingRouter:
+        def __init__(self, settings: object) -> None:
+            pass
+
+        def chat(self, prompt: str, history: list[object]) -> ChatResult:
+            raise RouterError(
+                "The model request could not be completed. Please try again."
+            )
+
+    monkeypatch.setattr("llm_router.router.LLMRouter", FailingRouter)
+
+    app = AppTest.from_file(str(APP_PATH)).run(timeout=10)
+    session_id = query_session_id(app)
+    app.chat_input[0].set_value("Please answer this").run(timeout=10)
+
+    assert not app.exception
+    assert app.error[0].value == (
+        "The model request could not be completed. Please try again."
+    )
+    assert load_messages(database, session_id) == [
+        {"role": "user", "content": "Please answer this"}
+    ]

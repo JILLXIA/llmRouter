@@ -13,3 +13,6 @@ htmlcov/
 dist/
 build/
 logs/*.log
+*.db
+*.db-shm
+*.db-wal
