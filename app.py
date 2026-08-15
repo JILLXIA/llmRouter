@@ -10,7 +10,9 @@ from llm_router.storage import (
     clear_messages,
     get_or_create_session,
     load_messages,
+    load_summary,
     save_message,
+    save_summary,
 )
 
 logging.basicConfig(
@@ -79,6 +81,7 @@ def main() -> None:
         st.query_params["session_id"] = session_id
 
     messages = load_messages(settings.database_path, session_id)
+    conversation_summary = load_summary(settings.database_path, session_id)
     render_sidebar(settings, session_id)
     render_history(messages)
 
@@ -101,7 +104,12 @@ def main() -> None:
 
         try:
             with st.spinner("Choosing the best model..."):
-                result = get_router().chat(prompt, messages, on_chunk=render_chunk)
+                result = get_router().chat(
+                    prompt,
+                    messages,
+                    conversation_summary=conversation_summary,
+                    on_chunk=render_chunk,
+                )
         except RouterError as error:
             placeholder.empty()
             st.error(str(error))
@@ -110,6 +118,9 @@ def main() -> None:
         placeholder.markdown(result.response)
         routing = result.routing_metadata()
         st.caption(routing_caption(routing))
+
+    if result.summary_update:
+        save_summary(settings.database_path, session_id, result.summary_update)
 
     save_message(
         settings.database_path,

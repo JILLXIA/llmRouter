@@ -18,10 +18,20 @@ class Intent(str, Enum):
 
 class IntentResult(BaseModel):
     """Structured result returned by the lightweight intent model."""
-    model_config = ConfigDict(extra="forbid") # filter out extra parameter which not belongs to this model
+
+    model_config = ConfigDict(extra="forbid")
 
     intent: Intent
     confidence: float = Field(ge=0.0, le=1.0)
+
+
+@dataclass(frozen=True)
+class ConversationSummary:
+    text: str
+    summarized_through_message_id: int
+    model: str
+    input_tokens: int = 0
+    output_tokens: int = 0
 
 
 @dataclass(frozen=True)
@@ -34,6 +44,7 @@ class ChatResult:
     input_tokens: int = 0
     output_tokens: int = 0
     total_tokens: int = 0
+    summary_update: ConversationSummary | None = None
 
     def routing_metadata(self) -> dict[str, str | int | float]:
         """Return routing and usage data stored with the assistant message."""

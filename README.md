@@ -1,5 +1,5 @@
 # LLM Router
-
+// TODO, new feature, router to company level question or outside question
 This repository implements the P0 vertical slice of `Slack.AI LLM Router Platform.md`: a Streamlit chat application that classifies each message, chooses an OpenAI model, and displays the answer with routing metadata.
 
 ## P0 behavior
@@ -8,7 +8,7 @@ This repository implements the P0 vertical slice of `Slack.AI LLM Router Platfor
 2. Ambiguous or unmatched messages use `gpt-5.4-nano` for typed intent classification.
 3. The router selects a configured OpenAI response model.
 4. Each anonymous conversation gets a UUID v4 in the page URL and is stored in SQLite.
-5. The selected model receives up to the last 10 chat messages through the Responses API.
+5. The selected model receives a token-bounded context containing one rolling summary and recent messages.
 6. Streamlit displays the answer as it streams, followed by the routing decision and response-model token usage.
 
 The default routing table is:
@@ -39,6 +39,15 @@ streamlit run app.py
 
 The `.env` file is ignored by Git. Never commit the key.
 
+Long-conversation defaults can also be overridden in `.env`:
+
+```text
+CONTEXT_TOKEN_BUDGET=8000
+SUMMARY_TRIGGER_TOKENS=6000
+RECENT_CONTEXT_TOKENS=3000
+SUMMARY_MAX_OUTPUT_TOKENS=600
+```
+
 The app creates an anonymous session and adds `?session_id=<uuid>` to the URL. Opening that URL restores the conversation from SQLite. Treat the URL as private: this MVP has no login, so anyone with the session URL can read that conversation. `Clear chat` deletes its messages while keeping the same session ID.
 
 ## Run tests
@@ -48,7 +57,7 @@ python -m pytest
 python -m pytest --cov=llm_router --cov=app --cov-report=term-missing
 ```
 
-The automated suite injects fake LangChain models and does not consume API credits. The current implementation passes 45 tests with 92% branch coverage. A real-model smoke test requires a valid `OPENAI_API_KEY` and access to the configured model IDs.
+The automated suite injects fake LangChain models and does not consume API credits. The current implementation passes 55 tests with 91% branch coverage. A real-model smoke test requires a valid `OPENAI_API_KEY` and access to the configured model IDs.
 
 ## Run evaluations
 
@@ -83,7 +92,7 @@ tests/test_storage.py          SQLite persistence and isolation tests
 tests/test_evals.py            Dataset, metric, error, and CLI tests
 ```
 
-The P0 deliberately has one main backend class: `LLMRouter`. Its `chat()` method classifies the prompt, looks up the configured model, converts recent history to LangChain messages, streams model text through an optional callback, and returns the completed answer with routing metadata. Small helper methods keep those steps readable without introducing a layer for each one.
+The P0 deliberately has one main backend class: `LLMRouter`. Its `chat()` method classifies the prompt, selects the model, prepares token-aware context, and streams the answer. When context grows past the configured trigger, the economy model replaces the session's previous summary with a cumulative summary of older complete turns. SQLite retains every original message for the UI.
 
 LangChain's `init_chat_model` enables the OpenAI Responses API and provider-native JSON Schema output for intent classification. Routed response models are cached by model ID.
 

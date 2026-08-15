@@ -28,7 +28,7 @@ The following defaults were approved for implementation:
 | Provider | OpenAI only |
 | OpenAI API | Responses API through LangChain's OpenAI integration |
 | Chat input | Text only |
-| Chat history | Store in SQLite; load the full conversation for display and send the most recent 10 messages to the response model |
+| Chat history | Store the full conversation in SQLite; send a rolling summary plus token-bounded recent turns to the response model |
 | Intent classes | Keep the original six: code generation, code analysis, analysis, summarization, creative writing, general |
 | Hybrid classification | Use keyword rules first; call the lightweight LLM only when keyword evidence is missing or ambiguous |
 | Intent model | `gpt-5.4-nano` with Structured Outputs |
@@ -327,10 +327,11 @@ On each page load:
 4. Write the canonical ID back to `?session_id=<uuid>`.
 5. Load that session's messages from SQLite in insertion order.
 
-Use two small tables:
+Use three small tables:
 
 - `sessions`: session UUID plus creation and last-update timestamps;
 - `messages`: session foreign key, role, content, routing fields, latency, token usage, and creation timestamp.
+- `conversation_summaries`: one cumulative summary and message boundary per session.
 
 Storage requirements:
 
@@ -342,8 +343,12 @@ Storage requirements:
 - isolate reads, writes, and clears by session ID;
 - render the full stored conversation after each Streamlit rerun;
 - do not send the internal `routing` object as chat content;
-- cap model context to the most recent 10 messages initially;
-- make `Clear chat` delete only the current session's messages and keep its UUID;
+- count the selected response model's input tokens and fall back to a conservative character estimate if local counting fails;
+- when context exceeds the summary trigger, summarize older complete turns with the economy model and keep recent turns verbatim;
+- keep only one rolling summary per session, replacing it atomically with the previous summary plus newly compacted turns;
+- retain all original messages for display and use the summary only for model context;
+- fall back to token-aware truncation if summarization fails;
+- make `Clear chat` delete the current session's messages and summary while keeping its UUID;
 - retain sessions and messages until cleared or the database is manually removed.
 
 Keep the persistence API small:
@@ -352,7 +357,9 @@ Keep the persistence API small:
 initialize_database(database_path)
 get_or_create_session(database_path, requested_id=None) -> str
 load_messages(database_path, session_id) -> list[dict]
+load_summary(database_path, session_id) -> ConversationSummary | None
 save_message(database_path, session_id, role, content, routing=None)
+save_summary(database_path, session_id, summary)
 clear_messages(database_path, session_id)
 ```
 
@@ -369,7 +376,10 @@ INTENT_MODEL=gpt-5.4-nano
 HIGH_QUALITY_MODEL=gpt-5.6-sol
 BALANCED_MODEL=gpt-5.6-terra
 ECONOMY_MODEL=gpt-5.6-luna
-CHAT_HISTORY_MESSAGES=10
+CONTEXT_TOKEN_BUDGET=8000
+SUMMARY_TRIGGER_TOKENS=6000
+RECENT_CONTEXT_TOKENS=3000
+SUMMARY_MAX_OUTPUT_TOKENS=600
 ```
 
 Rules:
@@ -461,7 +471,7 @@ Inject a fake LangChain model factory in automated tests; do not spend API credi
 
 - User message produces one streamed response call.
 - Response call uses the selected model.
-- Recent history is included and capped.
+- Context contains the rolling summary and recent complete turns within the token budget.
 - Routing metadata is not sent as conversation text.
 - Chunks are emitted in order and the final result reconstructs their text and usage.
 - Empty stream and OpenAI error become friendly application errors.
@@ -534,7 +544,7 @@ Do not build these in the MVP:
 - FastAPI/SSE response streaming; Streamlit streaming is implemented.
 - Docker, Kubernetes, Kafka, ClickHouse, Redis, PostgreSQL, or managed databases.
 - User login, session ownership, API-key management, tenants, quotas, or budgets.
-- Response caching or context compression.
+- Response caching.
 - Prometheus, dashboards, alerts, or a statistics API.
 - Cross-device user accounts, session lists, retention jobs, or multi-instance storage.
 - File, image, audio, or tool input.
@@ -578,7 +588,7 @@ These can be introduced after the vertical slice is reviewed and working.
 1. One Streamlit process calls the internal router and storage modules; there is no FastAPI backend in P0.
 2. The lightweight intent model runs only for ambiguous or unmatched keyword results.
 3. Sol handles code, Terra handles analysis/creative writing, and Luna handles summarization/general by default.
-4. The response model receives at most the latest 10 messages.
+4. The response model receives a cumulative summary plus recent turns within an 8,000-token input budget.
 5. Response generation streams through an optional callback and still returns one final `ChatResult`.
 6. LangChain `init_chat_model` is used directly inside the single `LLMRouter` backend class.
 7. UUID v4 session IDs live in the URL and SQLite is the sole conversation source of truth.
@@ -586,19 +596,20 @@ These can be introduced after the vertical slice is reviewed and working.
 9. This P0 has no authentication; the session URL must be treated as private.
 10. Partial streamed assistant output is discarded on failure; the user prompt remains stored.
 11. Offline evaluation measures only the keyword stage; only reviewed live results measure the full hybrid router.
+12. Each session has one rolling summary; updating it replaces the old row without deleting original messages.
 
 ## 21. Implementation verification
 
-Completed locally on 2026-08-12:
+Completed locally on 2026-08-13:
 
 - all six intent types and all routing-table entries are unit tested;
 - keyword, LLM, and deterministic fallback paths are tested;
-- history limiting and removal of internal routing metadata are tested;
-- the consolidated router tests cover keyword/LLM/fallback classification, all model routes, LangChain message conversion, model configuration, structured output, history limits, errors, and per-model caching;
+- token-aware context, cumulative summaries, safe truncation, and removal of internal routing metadata are tested;
+- the consolidated router tests cover keyword/LLM/fallback classification, all model routes, LangChain message conversion, model configuration, structured output, context limits, errors, and per-model caching;
 - friendly empty-output and provider-error behavior is tested;
 - response chunk ordering, usage reconstruction, empty chunks, empty streams, and partial-stream failure are tested;
 - Streamlit controls, UUID URL creation/validation, persisted-session restore, missing-key behavior, mocked chat submission, routing caption, failure persistence, and clear-chat behavior are smoke tested;
-- SQLite schema initialization, ordered metadata round trips, session isolation, clear semantics, and input validation are unit tested;
+- SQLite schema initialization, ordered metadata round trips, rolling-summary replacement, session isolation, clear semantics, and input validation are unit tested;
 - the 120-case dataset shape, validation, keyword/live evaluation flow, thresholds, errors, and report output are tested;
 - the installed LangChain OpenAI integration accepts the configured Responses API, reasoning, timeout, token-limit, and structured-output options;
 - automated tests pass without network calls or API credits;

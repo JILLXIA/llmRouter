@@ -1,12 +1,18 @@
 from __future__ import annotations
 
+from math import ceil
 from typing import Any
 
 import pytest
-from langchain_core.messages import AIMessage, AIMessageChunk, HumanMessage, SystemMessage
+from langchain_core.messages import (
+    AIMessage,
+    AIMessageChunk,
+    HumanMessage,
+    SystemMessage,
+)
 
 from llm_router.config import Settings
-from llm_router.models import Intent, IntentResult
+from llm_router.models import ConversationSummary, Intent, IntentResult
 from llm_router.router import LLMRouter, RouterError, keyword_match
 
 
@@ -41,6 +47,17 @@ class StubModel:
         self.calls: list[list[object]] = []
         self.stream_kwargs: list[dict[str, object]] = []
         self.error_after_chunks: int | None = None
+        self.invoke_error: Exception | None = None
+        self.invoke_calls: list[list[object]] = []
+        self.invoke_result = AIMessage(
+            content="Concise earlier memory",
+            usage_metadata={
+                "input_tokens": 40,
+                "output_tokens": 8,
+                "total_tokens": 48,
+            },
+        )
+        self.token_count_error: Exception | None = None
         self.structured = StubRunnable()
         self.structured_schema: object | None = None
         self.structured_method: str | None = None
@@ -51,7 +68,16 @@ class StubModel:
         return self.structured
 
     def invoke(self, messages: list[object]) -> AIMessage:
-        raise AssertionError("response generation must use stream(), not invoke()")
+        self.invoke_calls.append(messages)
+        if self.invoke_error:
+            raise self.invoke_error
+        return self.invoke_result
+
+    def get_num_tokens_from_messages(self, messages: list[object]) -> int:
+        if self.token_count_error:
+            raise self.token_count_error
+        characters = sum(len(str(message.content)) for message in messages)
+        return ceil(characters / 4) + 4 * len(messages)
 
     def stream(
         self,
@@ -74,10 +100,14 @@ class StubModelFactory:
     def __init__(self) -> None:
         self.calls: list[dict[str, Any]] = []
         self.models: list[StubModel] = []
+        self.invoke_error: Exception | None = None
+        self.token_count_error: Exception | None = None
 
     def __call__(self, **kwargs: Any) -> StubModel:
         self.calls.append(kwargs)
         model = StubModel(kwargs["model"])
+        model.invoke_error = self.invoke_error
+        model.token_count_error = self.token_count_error
         self.models.append(model)
         return model
 
@@ -155,7 +185,7 @@ def test_model_routing(intent: Intent, expected_model: str) -> None:
 
 
 def test_chat_selects_model_and_builds_langchain_messages() -> None:
-    router, factory = make_router(chat_history_messages=3)
+    router, factory = make_router()
     history = [
         {"role": "user", "content": "Old question"},
         {
@@ -167,7 +197,11 @@ def test_chat_selects_model_and_builds_langchain_messages() -> None:
     ]
 
     emitted: list[str] = []
-    result = router.chat("Implement a Python endpoint", history, on_chunk=emitted.append)
+    result = router.chat(
+        "Implement a Python endpoint",
+        history,
+        on_chunk=emitted.append,
+    )
 
     assert result.response == "A useful answer"
     assert result.intent == Intent.CODE_GENERATION
@@ -182,12 +216,15 @@ def test_chat_selects_model_and_builds_langchain_messages() -> None:
 
     sent = factory.models[1].calls[0]
     assert isinstance(sent[0], SystemMessage)
-    assert isinstance(sent[1], AIMessage)
-    assert sent[1].content == "Old answer"
-    assert isinstance(sent[2], HumanMessage)
-    assert sent[2].content == "Recent question"
+    assert isinstance(sent[1], HumanMessage)
+    assert sent[1].content == "Old question"
+    assert isinstance(sent[2], AIMessage)
+    assert sent[2].content == "Old answer"
     assert isinstance(sent[3], HumanMessage)
-    assert sent[3].content == "Implement a Python endpoint"
+    assert sent[3].content == "Recent question"
+    assert isinstance(sent[4], HumanMessage)
+    assert sent[4].content == "Implement a Python endpoint"
+    assert factory.models[1].invoke_calls == []
 
 
 def test_langchain_configuration_and_structured_schema() -> None:
@@ -304,3 +341,123 @@ def test_empty_metadata_chunk_is_not_emitted() -> None:
 
     assert emitted == ["Done"]
     assert result.total_tokens == 4
+
+
+def test_long_history_creates_summary_and_keeps_recent_turns() -> None:
+    router, factory = make_router(
+        context_token_budget=250,
+        summary_trigger_tokens=100,
+        recent_context_tokens=80,
+        summary_max_output_tokens=50,
+    )
+    old_user = "Old requirement " * 8
+    old_answer = "Old implementation " * 8
+    recent_user = "Recent requirement " * 7
+    recent_answer = "Recent implementation " * 7
+    history = [
+        {"id": 1, "role": "user", "content": old_user},
+        {"id": 2, "role": "assistant", "content": old_answer},
+        {"id": 3, "role": "user", "content": recent_user},
+        {"id": 4, "role": "assistant", "content": recent_answer},
+    ]
+
+    result = router.chat("Implement a Python endpoint", history)
+
+    assert result.summary_update == ConversationSummary(
+        text="Concise earlier memory",
+        summarized_through_message_id=2,
+        model="economy-model",
+        input_tokens=40,
+        output_tokens=8,
+    )
+    assert factory.calls[2]["model"] == "economy-model"
+    assert factory.calls[2]["max_tokens"] == 50
+    assert factory.calls[2]["reasoning_effort"] == "none"
+    summary_request = factory.models[2].invoke_calls[0]
+    assert old_user in summary_request[1].content
+    assert old_answer in summary_request[1].content
+
+    response_context = factory.models[1].calls[0]
+    assert factory.models[1].get_num_tokens_from_messages(response_context) <= 250
+    assert any(
+        "Concise earlier memory" in str(item.content) for item in response_context
+    )
+    assert any(recent_user == item.content for item in response_context)
+    assert any(recent_answer == item.content for item in response_context)
+    assert not any(old_user == item.content for item in response_context)
+
+
+def test_summary_is_cumulative_and_ignores_already_summarized_messages() -> None:
+    router, factory = make_router(
+        context_token_budget=250,
+        summary_trigger_tokens=100,
+        recent_context_tokens=50,
+        summary_max_output_tokens=50,
+    )
+    previous = ConversationSummary("Existing memory", 2, "economy-model")
+    history = [
+        {"id": 1, "role": "user", "content": "Already summarized " * 8},
+        {"id": 2, "role": "assistant", "content": "Old answer " * 8},
+        {"id": 3, "role": "user", "content": "New fact " * 14},
+        {"id": 4, "role": "assistant", "content": "Fact response " * 14},
+        {"id": 5, "role": "user", "content": "Keep this recent"},
+    ]
+
+    result = router.chat(
+        "Implement a Python endpoint",
+        history,
+        conversation_summary=previous,
+    )
+
+    assert result.summary_update is not None
+    assert result.summary_update.summarized_through_message_id == 4
+    summary_input = factory.models[2].invoke_calls[0][1].content
+    assert "Existing memory" in summary_input
+    assert "New fact" in summary_input
+    assert "Already summarized" not in summary_input
+    response_context = factory.models[1].calls[0]
+    assert any(item.content == "Keep this recent" for item in response_context)
+
+
+def test_summary_failure_falls_back_without_blocking_response() -> None:
+    router, factory = make_router(
+        context_token_budget=100,
+        summary_trigger_tokens=80,
+        recent_context_tokens=40,
+    )
+    factory.invoke_error = RuntimeError("summary unavailable")
+    history = [
+        {"id": 1, "role": "user", "content": "Old requirement " * 8},
+        {"id": 2, "role": "assistant", "content": "Old response " * 8},
+        {"id": 3, "role": "user", "content": "Recent question"},
+    ]
+
+    result = router.chat("Implement a Python endpoint", history)
+
+    assert result.response == "A useful answer"
+    assert result.summary_update is None
+    response_context = factory.models[1].calls[0]
+    assert not any("Old requirement" in str(item.content) for item in response_context)
+    assert any(item.content == "Recent question" for item in response_context)
+
+
+def test_oversized_current_message_is_rejected_before_streaming() -> None:
+    router, factory = make_router(
+        context_token_budget=50,
+        summary_trigger_tokens=40,
+        recent_context_tokens=20,
+    )
+
+    with pytest.raises(RouterError, match="message is too long"):
+        router.chat("Implement a Python function " * 20, [])
+
+    assert factory.models[1].calls == []
+
+
+def test_token_count_failure_uses_character_fallback() -> None:
+    router, factory = make_router()
+    factory.token_count_error = RuntimeError("tokenizer unavailable")
+
+    result = router.chat("Implement a Python endpoint", [])
+
+    assert result.response == "A useful answer"

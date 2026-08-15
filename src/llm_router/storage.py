@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import Any, Iterator, Literal
 from uuid import UUID, uuid4
 
+from llm_router.models import ConversationSummary
+
 Role = Literal["user", "assistant"]
 DatabasePath = str | Path
 
@@ -61,6 +63,17 @@ def initialize_database(database_path: DatabasePath) -> None:
 
             CREATE INDEX IF NOT EXISTS idx_messages_session_id
             ON messages(session_id, id);
+
+            CREATE TABLE IF NOT EXISTS conversation_summaries (
+                session_id TEXT PRIMARY KEY,
+                summary TEXT NOT NULL,
+                summarized_through_message_id INTEGER NOT NULL,
+                model TEXT NOT NULL,
+                input_tokens INTEGER NOT NULL DEFAULT 0,
+                output_tokens INTEGER NOT NULL DEFAULT 0,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+            );
             """
         )
 
@@ -98,7 +111,7 @@ def load_messages(database_path: DatabasePath, session_id: str) -> list[dict[str
     with _connect(database_path) as connection:
         rows = connection.execute(
             """
-            SELECT role, content, intent, classifier_source, model, latency_ms,
+            SELECT id, role, content, intent, classifier_source, model, latency_ms,
                    input_tokens, output_tokens, total_tokens
             FROM messages
             WHERE session_id = ?
@@ -109,7 +122,11 @@ def load_messages(database_path: DatabasePath, session_id: str) -> list[dict[str
 
     messages: list[dict[str, Any]] = []
     for row in rows:
-        message: dict[str, Any] = {"role": row["role"], "content": row["content"]}
+        message: dict[str, Any] = {
+            "id": row["id"],
+            "role": row["role"],
+            "content": row["content"],
+        }
         if row["intent"] and row["classifier_source"] and row["model"]:
             message["routing"] = {
                 "intent": row["intent"],
@@ -122,6 +139,72 @@ def load_messages(database_path: DatabasePath, session_id: str) -> list[dict[str
             }
         messages.append(message)
     return messages
+
+
+def load_summary(
+    database_path: DatabasePath,
+    session_id: str,
+) -> ConversationSummary | None:
+    """Load the current rolling summary for a session."""
+
+    with _connect(database_path) as connection:
+        row = connection.execute(
+            """
+            SELECT summary, summarized_through_message_id, model,
+                   input_tokens, output_tokens
+            FROM conversation_summaries
+            WHERE session_id = ?
+            """,
+            (session_id,),
+        ).fetchone()
+    if not row:
+        return None
+    return ConversationSummary(
+        text=row["summary"],
+        summarized_through_message_id=row["summarized_through_message_id"],
+        model=row["model"],
+        input_tokens=row["input_tokens"],
+        output_tokens=row["output_tokens"],
+    )
+
+
+def save_summary(
+    database_path: DatabasePath,
+    session_id: str,
+    summary: ConversationSummary,
+) -> None:
+    """Atomically insert or replace a session's rolling summary."""
+
+    if not summary.text.strip():
+        raise ValueError("summary cannot be empty")
+    if summary.summarized_through_message_id < 1:
+        raise ValueError("summary boundary must be a positive message id")
+
+    with _connect(database_path) as connection:
+        connection.execute(
+            """
+            INSERT INTO conversation_summaries (
+                session_id, summary, summarized_through_message_id, model,
+                input_tokens, output_tokens
+            ) VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(session_id) DO UPDATE SET
+                summary = excluded.summary,
+                summarized_through_message_id =
+                    excluded.summarized_through_message_id,
+                model = excluded.model,
+                input_tokens = excluded.input_tokens,
+                output_tokens = excluded.output_tokens,
+                updated_at = CURRENT_TIMESTAMP
+            """,
+            (
+                session_id,
+                summary.text,
+                summary.summarized_through_message_id,
+                summary.model,
+                summary.input_tokens,
+                summary.output_tokens,
+            ),
+        )
 
 
 def save_message(
@@ -170,6 +253,10 @@ def clear_messages(database_path: DatabasePath, session_id: str) -> None:
     """Delete a session's messages while keeping the session itself."""
 
     with _connect(database_path) as connection:
+        connection.execute(
+            "DELETE FROM conversation_summaries WHERE session_id = ?",
+            (session_id,),
+        )
         connection.execute("DELETE FROM messages WHERE session_id = ?", (session_id,))
         connection.execute(
             "UPDATE sessions SET updated_at = CURRENT_TIMESTAMP WHERE id = ?",
